@@ -1,17 +1,12 @@
-"""
-NRB Loan Classification — Transition Matrix Heatmap (Streamlit App)
-====================================================================
-Interactive Streamlit app with GitHub-themed background.
-Displays amount (NPR crore) + % of opening balance in each cell.
-"""
-
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import pandas as pd
 import streamlit as st
 import io
+import json
 
-# ── Page Configuration ────────────────────────────────────────────────────────
+# ── Page Config ───────────────────────────────────────────────────────────────
 
 st.set_page_config(
     page_title="NRB Loan Transition Matrix",
@@ -20,434 +15,251 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── GitHub-Themed CSS ─────────────────────────────────────────────────────────
+# ── GitHub Dark CSS ───────────────────────────────────────────────────────────
 
 st.markdown("""
 <style>
-    /* ── GitHub dark background ── */
-    .stApp {
-        background-color: #0d1117;
-        color: #c9d1d9;
-    }
-
-    /* ── Main content area ── */
-    .main .block-container {
-        background-color: #0d1117;
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-    }
-
-    /* ── Sidebar ── */
+    .stApp { background-color: #0d1117; color: #c9d1d9; }
+    .main .block-container { background-color: #0d1117; padding-top: 1.5rem; }
     [data-testid="stSidebar"] {
-        background-color: #161b22;
-        border-right: 1px solid #30363d;
+        background-color: #161b22; border-right: 1px solid #30363d;
     }
-
-    [data-testid="stSidebar"] .stMarkdown h1,
-    [data-testid="stSidebar"] .stMarkdown h2,
-    [data-testid="stSidebar"] .stMarkdown h3,
-    [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] .stMarkdown p {
-        color: #c9d1d9 !important;
-    }
-
-    /* ── Headers ── */
-    h1, h2, h3, h4, h5, h6 {
+    [data-testid="stSidebar"] * { color: #c9d1d9 !important; }
+    h1,h2,h3,h4,h5,h6 {
         color: #f0f6fc !important;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial !important;
+        font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial !important;
     }
 
-    /* ── GitHub-style metric cards ── */
-    .github-card {
-        background-color: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 6px;
-        padding: 16px 20px;
-        margin: 8px 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial;
+    .gh-card {
+        background: #161b22; border: 1px solid #30363d;
+        border-radius: 6px; padding: 14px 18px; margin: 6px 0;
     }
-
-    .github-card-title {
-        color: #8b949e;
-        font-size: 12px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 4px;
+    .gh-card-title {
+        color: #8b949e; font-size: 11px; font-weight: 600;
+        text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px;
     }
+    .gh-card-value { color: #f0f6fc; font-size: 24px; font-weight: 700; }
+    .gh-green { color: #3fb950; } .gh-red { color: #f85149; }
+    .gh-blue  { color: #58a6ff; } .gh-amber { color: #d29922; }
 
-    .github-card-value {
-        color: #f0f6fc;
-        font-size: 24px;
-        font-weight: 700;
+    .gh-header {
+        background: linear-gradient(135deg,#161b22,#0d1117);
+        border: 1px solid #30363d; border-radius: 6px;
+        padding: 20px 28px; margin-bottom: 20px;
     }
+    .gh-header h1 { font-size: 26px !important; margin: 0 0 6px !important; }
+    .gh-header p  { color: #8b949e; font-size: 13px; margin: 0; }
 
-    .github-card-sub {
-        color: #3fb950;
-        font-size: 12px;
-        margin-top: 2px;
-    }
-
-    /* ── GitHub-style header banner ── */
-    .github-header {
-        background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
-        border: 1px solid #30363d;
-        border-radius: 6px;
-        padding: 24px 32px;
-        margin-bottom: 24px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial;
-    }
-
-    .github-header h1 {
-        color: #f0f6fc !important;
-        font-size: 28px !important;
-        font-weight: 700 !important;
-        margin: 0 0 8px 0 !important;
-    }
-
-    .github-header p {
-        color: #8b949e;
-        font-size: 14px;
-        margin: 0;
-    }
-
-    /* ── Badge style ── */
     .badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 11px;
-        font-weight: 600;
-        margin-right: 6px;
+        display: inline-block; padding: 2px 8px; border-radius: 12px;
+        font-size: 11px; font-weight: 600; margin-right: 4px;
     }
-    .badge-blue  { background-color: #1f6feb; color: #f0f6fc; }
-    .badge-green { background-color: #238636; color: #f0f6fc; }
-    .badge-amber { background-color: #9e6a03; color: #f0f6fc; }
+    .badge-blue  { background: #1f6feb; color: #f0f6fc; }
+    .badge-green { background: #238636; color: #f0f6fc; }
 
-    /* ── GitHub-style plot container ── */
-    .plot-container {
-        background-color: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 6px;
-        padding: 20px;
-        margin-top: 16px;
+    .plot-box {
+        background: #161b22; border: 1px solid #30363d;
+        border-radius: 6px; padding: 16px; margin-top: 12px;
     }
+    .gh-divider { border: none; border-top: 1px solid #21262d; margin: 16px 0; }
 
-    /* ── Divider ── */
-    .github-divider {
-        border: none;
-        border-top: 1px solid #21262d;
-        margin: 20px 0;
+    .stButton>button {
+        background: #238636; color: #f0f6fc;
+        border: 1px solid rgba(240,246,252,.1);
+        border-radius: 6px; font-weight: 600; padding: 8px 20px;
     }
-
-    /* ── Streamlit widget overrides ── */
-    .stSlider label, .stNumberInput label,
-    .stSelectbox label, .stCheckbox label {
-        color: #c9d1d9 !important;
-        font-size: 14px !important;
+    .stButton>button:hover { background: #2ea043; }
+    .stDownloadButton>button {
+        background: #21262d; color: #c9d1d9;
+        border: 1px solid #30363d; border-radius: 6px;
     }
-
-    .stSlider [data-baseweb="slider"] {
-        color: #1f6feb;
-    }
-
     div[data-baseweb="input"] input {
-        background-color: #0d1117 !important;
-        border: 1px solid #30363d !important;
-        color: #c9d1d9 !important;
-        border-radius: 6px !important;
+        background: #0d1117 !important; border: 1px solid #30363d !important;
+        color: #c9d1d9 !important; border-radius: 6px !important;
     }
 
-    div[data-baseweb="select"] > div {
-        background-color: #0d1117 !important;
-        border: 1px solid #30363d !important;
-        color: #c9d1d9 !important;
-    }
-
-    /* ── Buttons ── */
-    .stButton > button {
-        background-color: #238636;
-        color: #f0f6fc;
-        border: 1px solid rgba(240,246,252,0.1);
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 14px;
-        padding: 6px 16px;
-        transition: background-color 0.15s ease;
-    }
-    .stButton > button:hover {
-        background-color: #2ea043;
-        border-color: rgba(240,246,252,0.2);
-    }
-
-    /* ── Download button ── */
-    .stDownloadButton > button {
-        background-color: #21262d;
-        color: #c9d1d9;
-        border: 1px solid #30363d;
-        border-radius: 6px;
-        font-size: 14px;
-    }
-    .stDownloadButton > button:hover {
-        background-color: #30363d;
-        color: #f0f6fc;
-    }
-
-    /* ── Info/warning boxes ── */
-    .stAlert {
-        background-color: #161b22 !important;
-        border: 1px solid #30363d !important;
-        border-radius: 6px !important;
-        color: #c9d1d9 !important;
-    }
-
-    /* ── DataFrame / table ── */
-    .stDataFrame {
-        background-color: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 6px;
-    }
-
-    /* ── Tab styling ── */
     .stTabs [data-baseweb="tab-list"] {
-        background-color: #0d1117;
-        border-bottom: 1px solid #21262d;
+        background: #0d1117; border-bottom: 1px solid #21262d;
     }
-    .stTabs [data-baseweb="tab"] {
-        color: #8b949e;
-        background-color: transparent;
-    }
+    .stTabs [data-baseweb="tab"] { color: #8b949e; background: transparent; }
     .stTabs [aria-selected="true"] {
-        color: #f0f6fc !important;
-        border-bottom: 2px solid #f78166 !important;
+        color: #f0f6fc !important; border-bottom: 2px solid #f78166 !important;
     }
 
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    .grade-block {
+        background: #161b22; border: 1px solid #30363d;
+        border-radius: 8px; padding: 20px; margin-bottom: 16px;
+    }
+    .remaining-ok   { color: #3fb950; font-weight: 700; }
+    .remaining-warn { color: #f85149; font-weight: 700; }
+    .remaining-left { color: #d29922; font-weight: 700; }
+
+    .flow-arrow {
+        color: #484f58; font-size: 18px; text-align: center;
+        padding-top: 30px;
+    }
+
+    ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: #0d1117; }
     ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #484f58; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── display settings ──────────────────────────────────────────────────────────
+# ── Constants ─────────────────────────────────────────────────────────────────
 
-plt.rcParams.update({
-    "font.family": "DejaVu Sans",
-    "figure.dpi": 140,
-    "savefig.dpi": 220,
-})
+GRADES = ["Good", "Watchlist", "Substandard", "Doubtful", "Bad"]
+ICONS  = ["🟢", "🟡", "🟠", "🔴", "⛔"]
+N = 5
 
-# ── color scheme ──────────────────────────────────────────────────────────────
+DEFAULT_PREV = [100, 320, 430, 340, 210]
+DEFAULT_MATRIX = [
+    [100,   0,   0,   0,   0],
+    [ 10, 300,  10,   0,   0],
+    [  0, 120, 300,  10,   0],
+    [  0,   0,   0, 300,  40],
+    [  0,   0,  10,   0, 200],
+]
 
-CANVAS_BG  = "#FAFAF8"
-HEADER_BG  = "#E8E6DF"
-ROW_HDR_BG = "#F1EFE8"
-GRID_EDGE  = "#D0CCC3"
-OUTER_EDGE = "#BDB7AC"
+# ── Color Scheme for Chart ────────────────────────────────────────────────────
 
+CANVAS_BG, HEADER_BG, ROW_HDR_BG = "#FAFAF8", "#E8E6DF", "#F1EFE8"
+GRID_EDGE, OUTER_EDGE = "#D0CCC3", "#BDB7AC"
 DIAG_BG, DIAG_FG = "#B5D4F4", "#042C53"
 UPG_BG,  UPG_FG  = "#EAF3DE", "#173404"
 ZERO_BG, ZERO_FG = "#F1EFE8", "#888780"
 MILD_BG, MILD_FG = "#FAEEDA", "#412402"
 MOD_BG,  MOD_FG  = "#F0997B", "#4A1B0C"
 SEV_BG,  SEV_FG  = "#A32D2D", "#FCEBEB"
+TEXT_DARK, TEXT_MID = "#2C2C2A", "#5F5E5A"
 
-TEXT_DARK = "#2C2C2A"
-TEXT_MID  = "#5F5E5A"
+plt.rcParams.update({"font.family": "DejaVu Sans", "figure.dpi": 140})
 
-GRADES_DEFAULT = ["Good", "Watchlist", "Substandard", "Doubtful", "Bad"]
+# ── Session State Init ────────────────────────────────────────────────────────
 
-TRANSITION_DEFAULT = np.array([
-    [100,   0,   0,   0,   0],
-    [ 10, 300,  10,   0,   0],
-    [  0, 120, 300,  10,   0],
-    [  0,   0,   0, 300,  40],
-    [  0,   0,  10,   0, 200],
-], dtype=float)
+if "prev" not in st.session_state:
+    st.session_state.prev = DEFAULT_PREV.copy()
+if "matrix" not in st.session_state:
+    st.session_state.matrix = [row.copy() for row in DEFAULT_MATRIX]
+if "period" not in st.session_state:
+    st.session_state.period = "Poush"
+if "generated" not in st.session_state:
+    st.session_state.generated = False
 
-PREV_DEFAULT = np.array([100, 320, 430, 340, 210], dtype=float)
-
-# ── helper functions ──────────────────────────────────────────────────────────
+# ── Helper Functions ──────────────────────────────────────────────────────────
 
 def cell_colors(val, ri, ci, prev):
-    if ri == ci:
-        return DIAG_BG, DIAG_FG
-    if val == 0:
-        return ZERO_BG, ZERO_FG
-    if ci < ri:
-        return UPG_BG, UPG_FG
+    if ri == ci:   return DIAG_BG, DIAG_FG
+    if val == 0:   return ZERO_BG, ZERO_FG
+    if ci < ri:    return UPG_BG,  UPG_FG
     pct = val / prev[ri] * 100 if prev[ri] > 0 else 0
-    if pct < 5:
-        return MILD_BG, MILD_FG
-    if pct < 30:
-        return MOD_BG, MOD_FG
+    if pct < 5:    return MILD_BG, MILD_FG
+    if pct < 30:   return MOD_BG,  MOD_FG
     return SEV_BG, SEV_FG
 
 
-def draw_cell(ax, x, y, w, h, bg, text_lines, fgs,
-              edgecolor=GRID_EDGE, lw=0.8,
-              fontsize1=9.5, fontsize2=8.0,
-              weight1="bold", weight2="normal",
-              ha="center"):
-    rect = mpatches.Rectangle(
-        (x, y), w, h,
-        linewidth=lw, edgecolor=edgecolor,
-        facecolor=bg, zorder=2,
-    )
-    ax.add_patch(rect)
-
-    tx = (x + 0.10 * w) if ha == "left" else (x + 0.50 * w)
-
-    if len(text_lines) == 1:
-        ax.text(tx, y + h / 2, text_lines[0],
-                ha=ha, va="center", fontsize=fontsize1,
-                color=fgs[0], fontweight=weight1, zorder=3)
-    else:
-        ax.text(tx, y + h * 0.64, text_lines[0],
-                ha=ha, va="center", fontsize=fontsize1,
-                color=fgs[0], fontweight=weight1, zorder=3)
-        ax.text(tx, y + h * 0.29, text_lines[1],
-                ha=ha, va="center", fontsize=fontsize2,
-                color=fgs[1], fontweight=weight2, zorder=3)
-
-
-def build_figure(grades, transition, prev, period_label="Poush"):
-    """Build and return the matplotlib figure."""
-    n = len(grades)
-    col_totals = transition.sum(axis=0)
-
-    ROW_H = 0.95
-    COL_W = 1.28
-    HDR_W = 2.35
-
-    total_h = (n + 1) * ROW_H
-    total_w = HDR_W + n * COL_W
-    fig_w = total_w + 0.7
-    fig_h = total_h + 1.8
-
-    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
-    fig.patch.set_facecolor(CANVAS_BG)
-    ax.set_facecolor(CANVAS_BG)
-    ax.set_aspect("equal")
-    ax.axis("off")
-
-    # top header row
-    top_y = n * ROW_H
-    draw_cell(ax, 0, top_y, HDR_W, ROW_H, HEADER_BG,
-              [f"From {period_label}", "Opening total"],
-              [TEXT_DARK, TEXT_MID],
-              ha="left", fontsize1=9.6, fontsize2=8.0)
-
-    for ci, grade in enumerate(grades):
-        x = HDR_W + ci * COL_W
-        draw_cell(ax, x, top_y, COL_W, ROW_H, HEADER_BG,
-                  [grade, f"Closing: {int(col_totals[ci]):,} cr"],
-                  [TEXT_DARK, TEXT_MID],
-                  fontsize1=9.3, fontsize2=7.8)
-
-    # data rows
-    for ri in range(n):
-        y = (n - 1 - ri) * ROW_H
-        draw_cell(ax, 0, y, HDR_W, ROW_H, ROW_HDR_BG,
-                  [grades[ri], f"Opening: {int(prev[ri]):,} cr"],
-                  [TEXT_DARK, TEXT_MID],
-                  ha="left", fontsize1=9.5, fontsize2=8.0)
-
-        for ci in range(n):
-            val = transition[ri, ci]
-            bg, fg = cell_colors(val, ri, ci, prev)
-            x = HDR_W + ci * COL_W
-            pct = val / prev[ri] * 100 if prev[ri] > 0 else 0
-
-            if val == 0 and ri != ci:
-                draw_cell(ax, x, y, COL_W, ROW_H, bg,
-                          ["—"], [ZERO_FG],
-                          fontsize1=10, weight1="normal")
-            else:
-                draw_cell(ax, x, y, COL_W, ROW_H, bg,
-                          [f"{int(val):,}", f"({pct:.1f}%)"],
-                          [fg, fg],
-                          fontsize1=10.0, fontsize2=8.2)
-
-    # outer border
+def draw_cell(ax, x, y, w, h, bg, lines, fgs,
+              ec=GRID_EDGE, fs1=9.5, fs2=8.0,
+              w1="bold", w2="normal", ha="center"):
     ax.add_patch(mpatches.Rectangle(
-        (0, 0), total_w, total_h,
-        fill=False, linewidth=1.15,
-        edgecolor=OUTER_EDGE, zorder=4))
+        (x, y), w, h, lw=0.8, edgecolor=ec, facecolor=bg, zorder=2))
+    tx = x + (0.10 if ha == "left" else 0.50) * w
+    if len(lines) == 1:
+        ax.text(tx, y+h/2, lines[0], ha=ha, va="center",
+                fontsize=fs1, color=fgs[0], fontweight=w1, zorder=3)
+    else:
+        ax.text(tx, y+h*.64, lines[0], ha=ha, va="center",
+                fontsize=fs1, color=fgs[0], fontweight=w1, zorder=3)
+        ax.text(tx, y+h*.29, lines[1], ha=ha, va="center",
+                fontsize=fs2, color=fgs[1], fontweight=w2, zorder=3)
 
-    ax.set_xlim(-0.08, total_w + 0.08)
-    ax.set_ylim(-0.08, total_h + 0.10)
 
-    # legend
-    legend_items = [
-        (DIAG_BG, "Retained (diagonal)"),
-        (UPG_BG,  "Upgrade"),
-        (MILD_BG, "Mild downgrade (<5%)"),
-        (MOD_BG,  "Moderate downgrade (5–30%)"),
-        (SEV_BG,  "Severe downgrade (>30%)"),
-        (ZERO_BG, "No flow"),
-    ]
+def build_figure(grades, trans, prev, period):
+    n = len(grades)
+    ct = trans.sum(axis=0)
+    RH, CW, HW = 0.95, 1.28, 2.35
+    th, tw = (n+1)*RH, HW+n*CW
+
+    fig, ax = plt.subplots(figsize=(tw+.7, th+1.8))
+    fig.patch.set_facecolor(CANVAS_BG)
+    ax.set_facecolor(CANVAS_BG); ax.set_aspect("equal"); ax.axis("off")
+
+    ty = n*RH
+    draw_cell(ax, 0, ty, HW, RH, HEADER_BG,
+              [f"From {period}", "Opening total"],
+              [TEXT_DARK, TEXT_MID], ha="left", fs1=9.6)
+    for ci, g in enumerate(grades):
+        draw_cell(ax, HW+ci*CW, ty, CW, RH, HEADER_BG,
+                  [g, f"Closing: {int(ct[ci]):,} cr"],
+                  [TEXT_DARK, TEXT_MID], fs1=9.3, fs2=7.8)
+
+    for ri in range(n):
+        y = (n-1-ri)*RH
+        draw_cell(ax, 0, y, HW, RH, ROW_HDR_BG,
+                  [grades[ri], f"Opening: {int(prev[ri]):,} cr"],
+                  [TEXT_DARK, TEXT_MID], ha="left")
+        for ci in range(n):
+            v = trans[ri, ci]
+            bg, fg = cell_colors(v, ri, ci, prev)
+            p = v/prev[ri]*100 if prev[ri] > 0 else 0
+            if v == 0 and ri != ci:
+                draw_cell(ax, HW+ci*CW, y, CW, RH, bg,
+                          ["—"], [ZERO_FG], fs1=10, w1="normal")
+            else:
+                draw_cell(ax, HW+ci*CW, y, CW, RH, bg,
+                          [f"{int(v):,}", f"({p:.1f}%)"],
+                          [fg, fg], fs1=10, fs2=8.2)
+
+    ax.add_patch(mpatches.Rectangle(
+        (0, 0), tw, th, fill=False, lw=1.15, edgecolor=OUTER_EDGE, zorder=4))
+    ax.set_xlim(-.08, tw+.08); ax.set_ylim(-.08, th+.1)
+
+    legend = [(DIAG_BG,"Retained"),(UPG_BG,"Upgrade"),
+              (MILD_BG,"Mild ↓ <5%"),(MOD_BG,"Moderate ↓ 5–30%"),
+              (SEV_BG,"Severe ↓ >30%"),(ZERO_BG,"No flow")]
     patches = [mpatches.Patch(facecolor=c, edgecolor=GRID_EDGE,
-                               linewidth=0.7, label=l)
-               for c, l in legend_items]
-
+               lw=.7, label=l) for c, l in legend]
     leg = ax.legend(handles=patches, loc="upper center",
-                    bbox_to_anchor=(0.5, -0.07), ncol=3,
-                    fontsize=8.3, frameon=True, fancybox=False,
-                    edgecolor=GRID_EDGE, columnspacing=1.3,
-                    handlelength=1.5, borderpad=0.6)
+                    bbox_to_anchor=(.5, -.07), ncol=3, fontsize=8.3,
+                    frameon=True, fancybox=False, edgecolor=GRID_EDGE,
+                    columnspacing=1.3, handlelength=1.5, borderpad=.6)
     leg.get_frame().set_facecolor(CANVAS_BG)
-    leg.get_frame().set_linewidth(0.8)
 
-    fig.suptitle(
-        "NRB Loan Classification — Transition Matrix",
-        fontsize=13, fontweight="bold", y=0.98, color=TEXT_DARK)
-
-    ax.set_title(
-        "Rows = opening grade  |  Columns = closing grade  |  "
-        "Cells = amount (NPR crore) and % of opening balance",
-        fontsize=8.8, color=TEXT_MID, pad=8)
-
-    plt.tight_layout(rect=(0, 0.05, 1, 0.94))
+    fig.suptitle("NRB Loan Classification — Transition Matrix",
+                 fontsize=13, fontweight="bold", y=.98, color=TEXT_DARK)
+    ax.set_title("Rows = opening grade | Columns = closing grade | "
+                 "Cells = NPR crore (% of opening)",
+                 fontsize=8.8, color=TEXT_MID, pad=8)
+    plt.tight_layout(rect=(0, .05, 1, .94))
     return fig
 
 
 def fig_to_bytes(fig, fmt="png", dpi=220):
     buf = io.BytesIO()
-    fig.savefig(buf, format=fmt, dpi=dpi,
-                bbox_inches="tight", pad_inches=0.15,
-                facecolor=fig.get_facecolor())
+    fig.savefig(buf, format=fmt, dpi=dpi, bbox_inches="tight",
+                pad_inches=.15, facecolor=fig.get_facecolor())
     buf.seek(0)
     return buf.read()
 
 
-def compute_stats(transition, prev):
+def compute_stats(trans, prev):
     n = len(prev)
-    retained = sum(transition[i, i] for i in range(n))
-    upgraded = sum(transition[ri, ci]
-                   for ri in range(n) for ci in range(ri)
-                   if ci < ri)
-    downgraded = sum(transition[ri, ci]
-                     for ri in range(n) for ci in range(ri + 1, n))
-    total = transition.sum()
-    return {
-        "total_opening":   int(prev.sum()),
-        "total_closing":   int(total),
-        "retained":        int(retained),
-        "upgraded":        int(upgraded),
-        "downgraded":      int(downgraded),
-        "retention_rate":  retained / total * 100 if total else 0,
-        "upgrade_rate":    upgraded  / total * 100 if total else 0,
-        "downgrade_rate":  downgraded / total * 100 if total else 0,
-    }
+    ret = sum(trans[i, i] for i in range(n))
+    up  = sum(trans[r, c] for r in range(n) for c in range(r))
+    dn  = sum(trans[r, c] for r in range(n) for c in range(r+1, n))
+    tot = trans.sum()
+    return dict(
+        total_opening=int(prev.sum()), total_closing=int(tot),
+        retained=int(ret), upgraded=int(up), downgraded=int(dn),
+        retention_pct=ret/tot*100 if tot else 0,
+        upgrade_pct=up/tot*100 if tot else 0,
+        downgrade_pct=dn/tot*100 if tot else 0)
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
 with st.sidebar:
     st.markdown("""
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
         <svg height="28" viewBox="0 0 16 16" width="28" fill="#f0f6fc">
             <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53
             5.47 7.59.4.07.55-.17.55-.38
@@ -463,249 +275,414 @@ with st.sidebar:
             0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013
             8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
         </svg>
-        <span style="color:#f0f6fc; font-size:18px; font-weight:700;">
-            NRB Matrix
-        </span>
+        <span style="color:#f0f6fc;font-size:18px;font-weight:700;">
+            NRB Matrix Tool</span>
     </div>
     """, unsafe_allow_html=True)
+    st.markdown("---")
+
+    st.session_state.period = st.text_input(
+        "📅 Period Label", value=st.session_state.period)
+
+    export_dpi = st.select_slider(
+        "🖼️ Export DPI", [100, 150, 220, 300], value=220)
 
     st.markdown("---")
-    st.markdown("### ⚙️ Configuration")
-
-    period_label = st.text_input("📅 Period Label", value="Poush",
-                                 help="Label shown in the top-left header cell")
-
-    st.markdown("---")
-    st.markdown("### 📊 Opening Balances (NPR Crore)")
-
-    prev_inputs = []
-    for i, g in enumerate(GRADES_DEFAULT):
-        val = st.number_input(g, min_value=0, max_value=99999,
-                              value=int(PREV_DEFAULT[i]),
-                              step=10, key=f"prev_{i}")
-        prev_inputs.append(float(val))
-    prev = np.array(prev_inputs)
+    if st.button("🔄 Reset to Defaults", use_container_width=True):
+        st.session_state.prev = DEFAULT_PREV.copy()
+        st.session_state.matrix = [r.copy() for r in DEFAULT_MATRIX]
+        st.session_state.generated = False
+        st.rerun()
 
     st.markdown("---")
-    st.markdown("### 🔢 Transition Matrix Values")
-    st.caption("Row = From grade · Column = To grade")
+    st.markdown("### 📤 Import / Export")
+    exp = {"grades": GRADES, "period": st.session_state.period,
+           "opening": st.session_state.prev,
+           "transition": st.session_state.matrix}
+    st.download_button("⬇️ Export JSON", json.dumps(exp, indent=2),
+                       "nrb_data.json", "application/json",
+                       use_container_width=True)
 
-    matrix_vals = []
-    for ri in range(5):
-        row = []
-        with st.expander(f"↳ From {GRADES_DEFAULT[ri]}", expanded=(ri == 0)):
-            cols = st.columns(5)
-            for ci in range(5):
-                v = cols[ci].number_input(
-                    GRADES_DEFAULT[ci][:4],
-                    min_value=0, max_value=99999,
-                    value=int(TRANSITION_DEFAULT[ri, ci]),
-                    step=10, key=f"t_{ri}_{ci}",
-                    label_visibility="visible"
-                )
-                row.append(float(v))
-        matrix_vals.append(row)
-    transition = np.array(matrix_vals)
-
-    st.markdown("---")
-    export_dpi = st.select_slider("🖼️ Export DPI",
-                                  options=[100, 150, 220, 300],
-                                  value=220)
-
-    regenerate = st.button("🔄 Regenerate Matrix", use_container_width=True)
+    up = st.file_uploader("⬆️ Import JSON", type=["json"])
+    if up:
+        try:
+            d = json.load(up)
+            st.session_state.prev = d["opening"]
+            st.session_state.matrix = d["transition"]
+            if "period" in d:
+                st.session_state.period = d["period"]
+            st.success("✅ Imported!"); st.rerun()
+        except Exception as e:
+            st.error(f"❌ {e}")
 
 
-# ── Main Area ─────────────────────────────────────────────────────────────────
+# ── Header ────────────────────────────────────────────────────────────────────
 
-# Header banner
 st.markdown("""
-<div class="github-header">
-    <h1>🏦 NRB Loan Classification</h1>
-    <p>
-        Nepal Rastra Bank · Loan Transition Matrix Heatmap ·
-        <span class="badge badge-blue">Interactive</span>
-        <span class="badge badge-green">Exportable</span>
-        <span class="badge badge-amber">NPR Crore</span>
+<div class="gh-header">
+    <h1>🏦 NRB Loan Classification — Transition Matrix</h1>
+    <p>Enter opening balance per grade → distribute to closing grades →
+       matrix builds automatically
+       <span class="badge badge-blue">Simplified</span>
+       <span class="badge badge-green">One-Pass Entry</span>
     </p>
 </div>
 """, unsafe_allow_html=True)
 
-# Tabs
-tab1, tab2, tab3 = st.tabs(["📊 Matrix Heatmap", "📈 Summary Stats", "ℹ️ About"])
 
-# ── Tab 1: Heatmap ────────────────────────────────────────────────────────────
-with tab1:
-    stats = compute_stats(transition, prev)
+# ── Tabs ──────────────────────────────────────────────────────────────────────
 
-    # KPI row
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.markdown(f"""
-        <div class="github-card">
-            <div class="github-card-title">Total Opening</div>
-            <div class="github-card-value">{stats['total_opening']:,}</div>
-            <div class="github-card-sub">NPR Crore</div>
-        </div>""", unsafe_allow_html=True)
-    with c2:
-        st.markdown(f"""
-        <div class="github-card">
-            <div class="github-card-title">Retained</div>
-            <div class="github-card-value">{stats['retained']:,}</div>
-            <div class="github-card-sub">↔ {stats['retention_rate']:.1f}% of closing</div>
-        </div>""", unsafe_allow_html=True)
-    with c3:
-        st.markdown(f"""
-        <div class="github-card">
-            <div class="github-card-title">Upgraded</div>
-            <div class="github-card-value" style="color:#3fb950;">
-                {stats['upgraded']:,}
-            </div>
-            <div class="github-card-sub">↑ {stats['upgrade_rate']:.1f}% of closing</div>
-        </div>""", unsafe_allow_html=True)
-    with c4:
-        st.markdown(f"""
-        <div class="github-card">
-            <div class="github-card-title">Downgraded</div>
-            <div class="github-card-value" style="color:#f85149;">
-                {stats['downgraded']:,}
-            </div>
-            <div class="github-card-sub">↓ {stats['downgrade_rate']:.1f}% of closing</div>
-        </div>""", unsafe_allow_html=True)
+tab_entry, tab_heatmap, tab_stats, tab_about = st.tabs(
+    ["✏️ Enter Data", "📊 Heatmap", "📈 Statistics", "ℹ️ About"])
 
-    st.markdown('<hr class="github-divider">', unsafe_allow_html=True)
 
-    # Build and display figure
-    with st.spinner("Rendering matrix…"):
-        fig = build_figure(GRADES_DEFAULT, transition, prev, period_label)
+# ══════════════════════════════════════════════════════════════════════════════
+#  TAB 1 — SIMPLIFIED DATA ENTRY
+# ══════════════════════════════════════════════════════════════════════════════
 
-    st.markdown('<div class="plot-container">', unsafe_allow_html=True)
-    st.pyplot(fig, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # Download buttons
-    st.markdown('<hr class="github-divider">', unsafe_allow_html=True)
-    dl1, dl2, dl3 = st.columns([1, 1, 2])
-    with dl1:
-        png_bytes = fig_to_bytes(fig, "png", export_dpi)
-        st.download_button(
-            label="⬇️ Download PNG",
-            data=png_bytes,
-            file_name="nrb_transition_matrix.png",
-            mime="image/png",
-            use_container_width=True,
-        )
-    with dl2:
-        svg_bytes = fig_to_bytes(fig, "svg", export_dpi)
-        st.download_button(
-            label="⬇️ Download SVG",
-            data=svg_bytes,
-            file_name="nrb_transition_matrix.svg",
-            mime="image/svg+xml",
-            use_container_width=True,
-        )
-
-    plt.close(fig)
-
-# ── Tab 2: Summary Stats ──────────────────────────────────────────────────────
-with tab2:
-    st.markdown("### Portfolio Flow Summary")
-
-    import pandas as pd
-
-    col_totals = transition.sum(axis=0)
-    row_totals = transition.sum(axis=1)
-
-    df_matrix = pd.DataFrame(
-        transition.astype(int),
-        index=[f"From {g}" for g in GRADES_DEFAULT],
-        columns=[f"To {g}" for g in GRADES_DEFAULT],
-    )
-    df_matrix["Row Total"] = row_totals.astype(int)
-
-    st.markdown("#### Transition Matrix (NPR Crore)")
-    st.dataframe(df_matrix, use_container_width=True)
-
-    st.markdown("#### Percentage of Opening Balance (%)")
-    pct_matrix = pd.DataFrame(
-        [[transition[ri, ci] / prev[ri] * 100
-          if prev[ri] > 0 else 0
-          for ci in range(5)]
-         for ri in range(5)],
-        index=[f"From {g}" for g in GRADES_DEFAULT],
-        columns=[f"To {g}" for g in GRADES_DEFAULT],
-    ).round(1)
-    st.dataframe(pct_matrix.style.background_gradient(
-        cmap="RdYlGn_r", axis=None), use_container_width=True)
-
-    st.markdown("#### Grade-level Summary")
-    summary_data = {
-        "Grade":         GRADES_DEFAULT,
-        "Opening (cr)":  prev.astype(int).tolist(),
-        "Retained (cr)": [int(transition[i, i]) for i in range(5)],
-        "Closing (cr)":  col_totals.astype(int).tolist(),
-        "Retention %":   [round(transition[i, i] / prev[i] * 100, 1)
-                          if prev[i] > 0 else 0 for i in range(5)],
-    }
-    st.dataframe(pd.DataFrame(summary_data), use_container_width=True)
-
-# ── Tab 3: About ──────────────────────────────────────────────────────────────
-with tab3:
+with tab_entry:
     st.markdown("""
-    ### About This App
+    ## 📝 Simple One-Pass Entry
 
-    This interactive tool visualises **Nepal Rastra Bank (NRB)** loan classification
-    transition matrices — showing how loan portfolios migrate between risk grades
-    from one period to the next.
-
-    ---
-
-    #### 📐 How to Read the Matrix
-
-    | Element | Meaning |
-    |---|---|
-    | **Row** | Opening grade (where the loan was classified) |
-    | **Column** | Closing grade (where it ended up) |
-    | **Diagonal cell** | Loan **retained** in the same grade |
-    | **Cell left of diagonal** | Loan **upgraded** (improved) |
-    | **Cell right of diagonal** | Loan **downgraded** (deteriorated) |
-    | **Top number** | Amount in NPR Crore |
-    | **Bottom number** | % of opening balance for that row |
-
-    ---
-
-    #### 🎨 Color Guide
-
-    | Color | Meaning |
-    |---|---|
-    | 🔵 Blue | Retained in same grade |
-    | 🟢 Green | Upgraded (improvement) |
-    | 🟡 Amber | Mild downgrade < 5% |
-    | 🟠 Coral | Moderate downgrade 5–30% |
-    | 🔴 Red | Severe downgrade > 30% |
-    | ⬜ Gray | No flow |
-
-    ---
-
-    #### 🏦 NRB Loan Grades
-
-    | Grade | Description |
-    |---|---|
-    | **Good** | Pass / Standard loans |
-    | **Watchlist** | Special mention / Watch |
-    | **Substandard** | Impaired, 3–6 months overdue |
-    | **Doubtful** | Significantly impaired |
-    | **Bad** | Loss / Write-off candidates |
-
-    ---
-
-    > Built with **Streamlit** · Data in **NPR Crore**
+    **How it works:**
+    1. Enter **opening balance** for each grade
+    2. For each grade, **distribute** the opening into closing categories
+    3. A live **remaining tracker** ensures you allocate exactly the opening
+    4. Hit **Generate** — done!
     """)
 
+    all_valid = True
+
+    for ri in range(N):
+        st.markdown(f"""
+        <div class="grade-block">
+            <span style="font-size:20px;">{ICONS[ri]}</span>
+            <span style="color:#f0f6fc;font-size:18px;font-weight:700;">
+                {GRADES[ri]}
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # ── Opening Balance ───────────────────────────────────────────────
+
+        oc1, oc2 = st.columns([1, 3])
+        with oc1:
+            opening = st.number_input(
+                f"Opening Balance (cr)",
+                min_value=0, max_value=999999,
+                value=int(st.session_state.prev[ri]),
+                step=10, key=f"op_{ri}",
+                help=f"Total {GRADES[ri]} loans at period start")
+            st.session_state.prev[ri] = opening
+
+        # ── Distribution to Closing Grades ────────────────────────────────
+
+        with oc2:
+            st.caption(f"Distribute {opening:,} cr across closing grades:")
+
+        dist_cols = st.columns(N + 1)
+
+        row_vals = []
+        for ci in range(N):
+            with dist_cols[ci]:
+                # Determine smart default: diagonal gets most
+                default_val = int(st.session_state.matrix[ri][ci])
+
+                label = GRADES[ci]
+                if ci == ri:
+                    label = f"✦ {GRADES[ci]} (same)"
+                elif ci < ri:
+                    label = f"↑ {GRADES[ci]}"
+                else:
+                    label = f"↓ {GRADES[ci]}"
+
+                v = st.number_input(
+                    label,
+                    min_value=0,
+                    max_value=max(opening, 999999),
+                    value=min(default_val, opening),
+                    step=5,
+                    key=f"d_{ri}_{ci}")
+                row_vals.append(v)
+
+        st.session_state.matrix[ri] = row_vals
+
+        # ── Remaining Tracker ─────────────────────────────────────────────
+
+        allocated = sum(row_vals)
+        remaining = opening - allocated
+
+        with dist_cols[N]:
+            if remaining == 0:
+                cls = "remaining-ok"
+                icon = "✅"
+                msg = "Fully allocated"
+            elif remaining > 0:
+                cls = "remaining-left"
+                icon = "🔸"
+                msg = f"{remaining:,} cr left"
+                all_valid = False
+            else:
+                cls = "remaining-warn"
+                icon = "⚠️"
+                msg = f"{abs(remaining):,} cr over"
+                all_valid = False
+
+            st.markdown(f"""
+            <div style="padding-top:24px;text-align:center;">
+                <div style="color:#8b949e;font-size:10px;
+                            text-transform:uppercase;letter-spacing:.5px;">
+                    Remaining</div>
+                <div class="{cls}" style="font-size:20px;margin:4px 0;">
+                    {icon} {remaining:,}
+                </div>
+                <div style="color:#8b949e;font-size:11px;">{msg}</div>
+                <div style="color:#484f58;font-size:10px;margin-top:4px;">
+                    {allocated:,} / {opening:,} cr
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Progress bar visual
+            pct_used = min(allocated / opening * 100, 100) if opening > 0 else 0
+            bar_color = "#3fb950" if remaining == 0 else (
+                "#d29922" if remaining > 0 else "#f85149")
+            st.markdown(f"""
+            <div style="background:#21262d;border-radius:4px;height:6px;
+                        margin-top:8px;overflow:hidden;">
+                <div style="background:{bar_color};height:100%;
+                            width:{pct_used}%;border-radius:4px;
+                            transition:width .3s;"></div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown('<hr class="gh-divider">', unsafe_allow_html=True)
+
+    # ── Grand Summary Before Generate ─────────────────────────────────────
+
+    total_opening  = sum(st.session_state.prev)
+    trans_arr      = np.array(st.session_state.matrix, dtype=float)
+    total_allocated = int(trans_arr.sum())
+    total_remaining = int(total_opening - total_allocated)
+
+    sc1, sc2, sc3 = st.columns(3)
+    with sc1:
+        st.markdown(f"""
+        <div class="gh-card">
+            <div class="gh-card-title">Total Opening</div>
+            <div class="gh-card-value">{int(total_opening):,}
+                <span style="font-size:13px;color:#8b949e;"> cr</span></div>
+        </div>""", unsafe_allow_html=True)
+    with sc2:
+        st.markdown(f"""
+        <div class="gh-card">
+            <div class="gh-card-title">Total Allocated</div>
+            <div class="gh-card-value">{total_allocated:,}
+                <span style="font-size:13px;color:#8b949e;"> cr</span></div>
+        </div>""", unsafe_allow_html=True)
+    with sc3:
+        rem_color = "gh-green" if total_remaining == 0 else (
+            "gh-amber" if total_remaining > 0 else "gh-red")
+        st.markdown(f"""
+        <div class="gh-card">
+            <div class="gh-card-title">Unallocated</div>
+            <div class="gh-card-value {rem_color}">{total_remaining:,}
+                <span style="font-size:13px;color:#8b949e;"> cr</span></div>
+        </div>""", unsafe_allow_html=True)
+
+    # ── Preview Table ─────────────────────────────────────────────────────
+
+    with st.expander("👁️ Preview Data Table", expanded=False):
+        prev_arr = np.array(st.session_state.prev, dtype=float)
+        df = pd.DataFrame(
+            trans_arr.astype(int),
+            index=[f"{ICONS[i]} {GRADES[i]}" for i in range(N)],
+            columns=GRADES)
+        df.insert(0, "Opening", prev_arr.astype(int))
+        df["Allocated"] = trans_arr.sum(axis=1).astype(int)
+        df["Remaining"] = (prev_arr - trans_arr.sum(axis=1)).astype(int)
+        st.dataframe(df, use_container_width=True)
+
+    # ── Generate Button ───────────────────────────────────────────────────
+
+    st.markdown("")
+    bc1, bc2, bc3 = st.columns([1, 2, 1])
+    with bc2:
+        if not all_valid:
+            st.warning("⚠️ Some grades are not fully allocated. "
+                       "You can still generate, but results may be partial.")
+
+        if st.button("🚀 Generate Transition Matrix",
+                      use_container_width=True, type="primary"):
+            st.session_state.generated = True
+            st.success("✅ Done! Switch to **📊 Heatmap** tab.")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  TAB 2 — HEATMAP RESULT
+# ══════════════════════════════════════════════════════════════════════════════
+
+with tab_heatmap:
+    if not st.session_state.generated:
+        st.info("👈 Enter data in **✏️ Enter Data** tab and click Generate.")
+    else:
+        prev_arr  = np.array(st.session_state.prev, dtype=float)
+        trans_arr = np.array(st.session_state.matrix, dtype=float)
+        stats = compute_stats(trans_arr, prev_arr)
+
+        k1, k2, k3, k4 = st.columns(4)
+        for col, title, val, sub, cls in [
+            (k1, "Total Opening",  stats["total_opening"],
+                 "NPR Crore",                      "gh-blue"),
+            (k2, "Retained",       stats["retained"],
+                 f'↔ {stats["retention_pct"]:.1f}%', "gh-blue"),
+            (k3, "Upgraded",       stats["upgraded"],
+                 f'↑ {stats["upgrade_pct"]:.1f}%',   "gh-green"),
+            (k4, "Downgraded",     stats["downgraded"],
+                 f'↓ {stats["downgrade_pct"]:.1f}%',  "gh-red"),
+        ]:
+            with col:
+                st.markdown(f"""
+                <div class="gh-card">
+                    <div class="gh-card-title">{title}</div>
+                    <div class="gh-card-value {cls}">{val:,}</div>
+                    <div style="font-size:12px;margin-top:4px;"
+                         class="{cls}">{sub}</div>
+                </div>""", unsafe_allow_html=True)
+
+        st.markdown('<hr class="gh-divider">', unsafe_allow_html=True)
+
+        with st.spinner("🎨 Rendering…"):
+            fig = build_figure(GRADES, trans_arr, prev_arr,
+                               st.session_state.period)
+
+        st.markdown('<div class="plot-box">', unsafe_allow_html=True)
+        st.pyplot(fig, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('<hr class="gh-divider">', unsafe_allow_html=True)
+        d1, d2, _ = st.columns([1, 1, 2])
+        with d1:
+            st.download_button("⬇️ PNG", fig_to_bytes(fig, "png", export_dpi),
+                               "nrb_matrix.png", "image/png",
+                               use_container_width=True)
+        with d2:
+            st.download_button("⬇️ SVG", fig_to_bytes(fig, "svg", export_dpi),
+                               "nrb_matrix.svg", "image/svg+xml",
+                               use_container_width=True)
+        plt.close(fig)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  TAB 3 — STATISTICS
+# ══════════════════════════════════════════════════════════════════════════════
+
+with tab_stats:
+    if not st.session_state.generated:
+        st.info("👈 Generate a matrix first.")
+    else:
+        prev_arr  = np.array(st.session_state.prev, dtype=float)
+        trans_arr = np.array(st.session_state.matrix, dtype=float)
+        ct = trans_arr.sum(axis=0)
+
+        st.markdown("### Transition Amounts (NPR Crore)")
+        df_a = pd.DataFrame(trans_arr.astype(int),
+                            index=[f"From {g}" for g in GRADES],
+                            columns=[f"To {g}" for g in GRADES])
+        df_a["Total"] = trans_arr.sum(axis=1).astype(int)
+        st.dataframe(df_a, use_container_width=True)
+
+        st.markdown("### Percentage of Opening (%)")
+        pct = [[trans_arr[r, c]/prev_arr[r]*100 if prev_arr[r] > 0 else 0
+                for c in range(N)] for r in range(N)]
+        df_p = pd.DataFrame(pct,
+                            index=[f"From {g}" for g in GRADES],
+                            columns=[f"To {g}" for g in GRADES]).round(1)
+        st.dataframe(df_p.style.background_gradient(
+            cmap="RdYlGn_r", axis=None), use_container_width=True)
+
+        st.markdown("### Grade Summary")
+        summary = pd.DataFrame({
+            "Grade": GRADES,
+            "Opening": prev_arr.astype(int),
+            "Retained": [int(trans_arr[i, i]) for i in range(N)],
+            "Closing": ct.astype(int),
+            "Retention %": [round(trans_arr[i, i]/prev_arr[i]*100, 1)
+                            if prev_arr[i] > 0 else 0 for i in range(N)],
+            "Net Change": (ct - prev_arr).astype(int),
+        })
+        st.dataframe(summary, use_container_width=True)
+
+        st.markdown("### Grade Details")
+        for i in range(N):
+            with st.expander(f"{ICONS[i]} {GRADES[i]}"):
+                ret = trans_arr[i, i]
+                up  = sum(trans_arr[i, c] for c in range(i))
+                dn  = sum(trans_arr[i, c] for c in range(i+1, N))
+                inf = sum(trans_arr[r, i] for r in range(N) if r != i)
+                m1, m2, m3, m4 = st.columns(4)
+                with m1: st.metric("Retained", f"{int(ret):,} cr")
+                with m2: st.metric("Upgraded out", f"{int(up):,} cr")
+                with m3: st.metric("Downgraded out", f"{int(dn):,} cr")
+                with m4: st.metric("Inflow", f"{int(inf):,} cr")
+
+        st.markdown('<hr class="gh-divider">', unsafe_allow_html=True)
+        csv = io.StringIO()
+        df_a.to_csv(csv)
+        st.download_button("⬇️ Download CSV", csv.getvalue(),
+                           "nrb_data.csv", "text/csv",
+                           use_container_width=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  TAB 4 — ABOUT
+# ══════════════════════════════════════════════════════════════════════════════
+
+with tab_about:
     st.markdown("""
-    <div style="margin-top:24px; padding:16px;
-                background:#161b22; border:1px solid #30363d;
-                border-radius:6px; font-size:13px; color:#8b949e;">
-        <strong style="color:#f0f6fc;">📦 Stack</strong><br>
-        Python · Streamlit · Matplotlib · NumPy · Pandas
-    </div>
-    """, unsafe_allow_html=True)
+    ## ℹ️ About
+
+    ### How Entry Works (Simplified)
+
+    ```
+    For EACH grade:
+    ┌─────────────────────────────────────────┐
+    │  1. Enter Opening Balance  (e.g. 430)   │
+    │                                         │
+    │  2. Distribute into closing grades:     │
+    │     ↑ Good ........... 0                │
+    │     ↑ Watchlist ...... 120              │
+    │     ✦ Substandard .... 300  (retained)  │
+    │     ↓ Doubtful ....... 10               │
+    │     ↓ Bad ............ 0                │
+    │                       ───               │
+    │     Allocated:        430  ✅            │
+    │     Remaining:          0               │
+    └─────────────────────────────────────────┘
+
+    Opening  = How much was in this grade
+    Closing  = Sum of all rows flowing INTO this grade
+               (computed automatically!)
+    ```
+
+    ### Color Legend
+
+    | Color | Meaning |
+    |-------|---------|
+    | 🔵 Blue | Retained (diagonal) |
+    | 🟢 Green | Upgrade |
+    | 🟡 Amber | Mild downgrade <5% |
+    | 🟠 Coral | Moderate 5–30% |
+    | 🔴 Red | Severe >30% |
+    | ⬜ Gray | No flow |
+
+    ### NRB Grades
+
+    | Grade | Status |
+    |-------|--------|
+    | Good | Performing |
+    | Watchlist | Special mention |
+    | Substandard | 3–6 months overdue |
+    | Doubtful | Significantly impaired |
+    | Bad | Loss / write-off |
+    """)
