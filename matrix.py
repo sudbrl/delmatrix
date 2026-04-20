@@ -308,7 +308,7 @@ def build_figure(grades, trans, prev, period):
     # Row opening totals = prev (opening balance per grade)
     RH, CW, HW = 0.95, 1.38, 2.45
     # +1 row for closing totals row at bottom
-    th = (n + 1) * RH
+    th = (n + 2) * RH
     tw = HW + n * CW
 
     fig, ax = plt.subplots(figsize=(tw + .7, th + 1.8))
