@@ -301,7 +301,6 @@ def build_figure(grades, trans, prev, period):
     """
     Rows = opening grade (row header shows opening balance)
     Columns = closing grade (column header shows CLOSING = sum of column)
-    Extra bottom row = closing totals per column
     """
     n = len(grades)
     # Column closing totals = sum of each column
@@ -309,7 +308,7 @@ def build_figure(grades, trans, prev, period):
     # Row opening totals = prev (opening balance per grade)
     RH, CW, HW = 0.95, 1.38, 2.45
     # +1 row for closing totals row at bottom
-    th = (n + 2) * RH
+    th = (n + 1) * RH
     tw = HW + n * CW
 
     fig, ax = plt.subplots(figsize=(tw + .7, th + 1.8))
@@ -346,17 +345,7 @@ def build_figure(grades, trans, prev, period):
                           [f"{int(v):,}", f"({p:.1f}%)"],
                           [fg, fg], fs1=10, fs2=8.2)
 
-    # ── Bottom closing-totals row ──────────────────────────────────────────
-    y_bottom = 0
-    draw_cell(ax, 0, y_bottom, HW, RH, "#D8D4CB",
-              ["Closing Total", "(Sum of column)"],
-              [TEXT_DARK, TEXT_MID], ha="left", fs1=9.0, fs2=7.8)
-    for ci in range(n):
-        draw_cell(ax, HW + ci * CW, y_bottom, CW, RH, DIAG_BG,
-                  [f"{int(col_closing[ci]):,} cr", "↑ closing"],
-                  [DIAG_FG, DIAG_FG], fs1=10, fs2=8.0)
-
-    # ── Outer border ──────────────────────────────────────────────────────
+        # ── Outer border ──────────────────────────────────────────────────────
     ax.add_patch(mpatches.Rectangle(
         (0, 0), tw, th, fill=False, lw=1.15, edgecolor=OUTER_EDGE, zorder=4))
     ax.set_xlim(-.08, tw + .08)
