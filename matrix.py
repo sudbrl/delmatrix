@@ -6,8 +6,26 @@ import streamlit as st
 import io
 import json
 
-# ── Page Config ───────────────────────────────────────────────────────────────
+# ── Dependency Check ──────────────────────────────────────────────────────────
+try:
+    import openpyxl
+except ImportError:
+    st.error("""
+    ❌ **Missing dependency: `openpyxl`**
+    
+    Run one of the following in your terminal:
+    ```bash
+    pip install openpyxl
+    ```
+    or
+    ```bash
+    conda install openpyxl
+    ```
+    Then restart the app.
+    """)
+    st.stop()
 
+# ── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="NRB Loan Transition Matrix",
     page_icon="🏦",
@@ -16,12 +34,10 @@ st.set_page_config(
 )
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
-
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap');
 
-    /* ── Soft warm background ── */
     .stApp { background-color: #F5F3EF; color: #2C2C2A;
              font-family: 'IBM Plex Sans', sans-serif; }
     .main .block-container { background-color: #F5F3EF; padding-top: 1.5rem; }
@@ -36,7 +52,6 @@ st.markdown("""
         font-family: 'IBM Plex Sans', sans-serif !important;
     }
 
-    /* ── Cards ── */
     .gh-card {
         background: #FFFFFF; border: 1px solid #D4CFCA;
         border-radius: 8px; padding: 14px 18px; margin: 6px 0;
@@ -51,7 +66,6 @@ st.markdown("""
     .gh-green { color: #2E7D32; } .gh-red { color: #C62828; }
     .gh-blue  { color: #1565C0; } .gh-amber { color: #E65100; }
 
-    /* ── Header ── */
     .gh-header {
         background: linear-gradient(135deg, #FFFFFF, #F0EDE7);
         border: 1px solid #D4CFCA; border-radius: 8px;
@@ -61,7 +75,6 @@ st.markdown("""
     .gh-header h1 { font-size: 26px !important; margin: 0 0 6px !important; color: #1A1A18 !important; }
     .gh-header p  { color: #7A7670; font-size: 13px; margin: 0; }
 
-    /* ── Badges ── */
     .badge {
         display: inline-block; padding: 2px 8px; border-radius: 12px;
         font-size: 11px; font-weight: 600; margin-right: 4px;
@@ -69,7 +82,6 @@ st.markdown("""
     .badge-blue  { background: #BBDEFB; color: #0D47A1; }
     .badge-green { background: #C8E6C9; color: #1B5E20; }
 
-    /* ── Upload Box ── */
     .upload-box {
         background: #FFFFFF; border: 2px dashed #BDBAB4;
         border-radius: 10px; padding: 32px 24px; text-align: center;
@@ -80,7 +92,6 @@ st.markdown("""
     .upload-box-title { color: #1A1A18; font-size: 17px; font-weight: 700; margin-bottom: 6px; }
     .upload-box-sub { color: #7A7670; font-size: 13px; line-height: 1.6; }
 
-    /* ── Template Info Card ── */
     .template-card {
         background: #EEF4FF; border: 1px solid #BBDEFB;
         border-radius: 8px; padding: 14px 18px; margin: 12px 0;
@@ -93,7 +104,6 @@ st.markdown("""
         white-space: pre-wrap;
     }
 
-    /* ── Success/Error Boxes ── */
     .parse-success {
         background: #E8F5E9; border: 1px solid #A5D6A7;
         border-radius: 8px; padding: 12px 16px; margin: 10px 0;
@@ -105,7 +115,6 @@ st.markdown("""
         color: #B71C1C; font-size: 13px;
     }
 
-    /* ── Plot Box ── */
     .plot-box {
         background: #FFFFFF; border: 1px solid #D4CFCA;
         border-radius: 8px; padding: 16px; margin-top: 12px;
@@ -113,7 +122,6 @@ st.markdown("""
     }
     .gh-divider { border: none; border-top: 1px solid #D4CFCA; margin: 16px 0; }
 
-    /* ── Buttons ── */
     .stButton>button {
         background: #1565C0; color: #FFFFFF;
         border: none; border-radius: 6px; font-weight: 600; padding: 8px 20px;
@@ -127,7 +135,6 @@ st.markdown("""
         font-family: 'IBM Plex Sans', sans-serif;
     }
 
-    /* ── Tabs ── */
     .stTabs [data-baseweb="tab-list"] {
         background: #F5F3EF; border-bottom: 1px solid #D4CFCA;
     }
@@ -139,7 +146,6 @@ st.markdown("""
         color: #1A1A18 !important; border-bottom: 2px solid #1565C0 !important;
     }
 
-    /* ── Matrix Summary Table ── */
     .matrix-summary {
         background: #FFFFFF; border: 1px solid #D4CFCA;
         border-radius: 8px; overflow: hidden; margin-top: 16px;
@@ -177,12 +183,10 @@ st.markdown("""
         border-top: 2px solid #D4CFCA;
     }
 
-    /* ── Scrollbar ── */
     ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: #F5F3EF; }
     ::-webkit-scrollbar-thumb { background: #D4CFCA; border-radius: 4px; }
 
-    /* ── File uploader ── */
     [data-testid="stFileUploader"] {
         background: #FFFFFF !important;
         border: 2px dashed #BDBAB4 !important;
@@ -194,12 +198,10 @@ st.markdown("""
     }
     .stFileUploader label { color: #2C2C2A !important; }
 
-    /* ── Info / Warning / Success boxes ── */
     .stInfo { background: #EEF4FF !important; color: #0D47A1 !important; }
     .stWarning { background: #FFF8E1 !important; color: #E65100 !important; }
     .stSuccess { background: #E8F5E9 !important; color: #1B5E20 !important; }
 
-    /* ── Period input ── */
     .stTextInput input {
         background: #FFFFFF !important; border: 1px solid #D4CFCA !important;
         color: #1A1A18 !important; border-radius: 6px !important;
@@ -210,13 +212,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-
 GRADES = ["Good", "Watchlist", "Substandard", "Doubtful", "Bad"]
 ICONS  = ["🟢", "🟡", "🟠", "🔴", "⛔"]
 N = 5
 
-# ── Color Scheme for Chart ────────────────────────────────────────────────────
-
+# ── Color Scheme ──────────────────────────────────────────────────────────────
 CANVAS_BG, HEADER_BG, ROW_HDR_BG = "#FAFAF8", "#E8E6DF", "#F1EFE8"
 GRID_EDGE, OUTER_EDGE = "#D0CCC3", "#BDB7AC"
 DIAG_BG, DIAG_FG = "#B5D4F4", "#042C53"
@@ -229,40 +229,66 @@ TEXT_DARK, TEXT_MID = "#2C2C2A", "#5F5E5A"
 
 plt.rcParams.update({"font.family": "DejaVu Sans", "figure.dpi": 140})
 
-# ── Session State Init ────────────────────────────────────────────────────────
-
-if "prev" not in st.session_state:
-    st.session_state.prev = None
-if "matrix" not in st.session_state:
-    st.session_state.matrix = None
-if "period" not in st.session_state:
-    st.session_state.period = ""
-if "generated" not in st.session_state:
-    st.session_state.generated = False
-if "upload_error" not in st.session_state:
-    st.session_state.upload_error = None
-if "filename" not in st.session_state:
-    st.session_state.filename = None
+# ── Session State ─────────────────────────────────────────────────────────────
+defaults = {
+    "prev": None,
+    "matrix": None,
+    "period": "",
+    "generated": False,
+    "upload_error": None,
+    "filename": None,
+}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 # ── Helper Functions ──────────────────────────────────────────────────────────
 
-def parse_template(file_bytes):
+def parse_template(file_bytes: bytes):
     """
-    Parse the uploaded Excel template.
+    Parse uploaded Excel template.
+    
     Expected format:
-        Row 0 (header): blank, Good, Watchlist, Substandard, Doubtful, Bad[, Grand Total]
-        Rows 1–5: grade name, 5 values [, optional grand total]
-    Returns (prev: np.array shape (5,), trans: np.array shape (5,5)) or raises ValueError.
+        Row 0 (header): blank, Good, Watchlist, Substandard, Doubtful, Bad [, Grand Total]
+        Rows 1-5: grade name, 5 values [, optional grand total]
+    
+    Returns:
+        prev  : np.ndarray shape (5,)  — opening balances (row sums)
+        trans : np.ndarray shape (5,5) — transition amounts
+    
+    Raises:
+        ValueError with descriptive message on any parse failure.
     """
-    df = pd.read_excel(io.BytesIO(file_bytes), header=None)
+    # ── Try reading with openpyxl engine first, fallback to xlrd ────────────
+    try:
+        df = pd.read_excel(
+            io.BytesIO(file_bytes),
+            header=None,
+            engine="openpyxl"
+        )
+    except Exception as e:
+        # Try xlrd as fallback for older .xls files
+        try:
+            df = pd.read_excel(
+                io.BytesIO(file_bytes),
+                header=None,
+                engine="xlrd"
+            )
+        except Exception:
+            raise ValueError(
+                f"Could not read Excel file: {e}. "
+                "Ensure the file is a valid .xlsx or .xls format."
+            )
 
-    # Normalize grade names (strip spaces, title-case)
-    def norm(s):
+    if df.empty:
+        raise ValueError("The uploaded file appears to be empty.")
+
+    def norm(s: str) -> str:
         return str(s).strip().lower()
 
     grade_norms = [norm(g) for g in GRADES]
 
-    # Find header row (contains at least 4 of the 5 grade names)
+    # ── Find header row ───────────────────────────────────────────────────
     header_row_idx = None
     for i, row in df.iterrows():
         matches = sum(1 for cell in row if norm(str(cell)) in grade_norms)
@@ -272,12 +298,13 @@ def parse_template(file_bytes):
 
     if header_row_idx is None:
         raise ValueError(
-            "Could not find header row with grade names "
-            "(Good, Watchlist, Substandard, Doubtful, Bad)."
+            "Could not find header row with NRB grade names. "
+            "Ensure your file contains: Good, Watchlist, Substandard, Doubtful, Bad "
+            "in a single header row."
         )
 
+    # ── Map column indices ────────────────────────────────────────────────
     header = df.iloc[header_row_idx]
-    # Build column index: grade_name -> col position
     col_map = {}
     for ci, cell in enumerate(header):
         n = norm(str(cell))
@@ -286,11 +313,12 @@ def parse_template(file_bytes):
 
     if len(col_map) < 5:
         raise ValueError(
-            f"Header row found but only {len(col_map)} of 5 grades detected: "
-            f"{list(col_map.keys())}"
+            f"Header row found at row {header_row_idx} but only "
+            f"{len(col_map)}/5 grades detected: {list(col_map.keys())}. "
+            f"Missing: {[g for g in grade_norms if g not in col_map]}"
         )
 
-    # Find data rows (rows whose first non-empty cell is a grade name)
+    # ── Find data rows ────────────────────────────────────────────────────
     data_rows = {}
     for i in range(header_row_idx + 1, len(df)):
         row = df.iloc[i]
@@ -299,12 +327,14 @@ def parse_template(file_bytes):
             data_rows[first_val] = row
 
     if len(data_rows) < 5:
+        missing = [g for g in grade_norms if g not in data_rows]
         raise ValueError(
-            f"Only {len(data_rows)} grade rows found; expected 5. "
-            f"Rows detected: {list(data_rows.keys())}"
+            f"Only {len(data_rows)}/5 grade rows found. "
+            f"Missing rows: {missing}. "
+            "Check that each data row starts with the exact grade name."
         )
 
-    # Build transition matrix in GRADES order
+    # ── Build transition matrix ───────────────────────────────────────────
     trans = np.zeros((5, 5), dtype=float)
     for ri, g_from in enumerate(grade_norms):
         row = data_rows[g_from]
@@ -318,38 +348,60 @@ def parse_template(file_bytes):
     # Opening balance = row sums
     prev = trans.sum(axis=1)
 
+    # ── Sanity checks ─────────────────────────────────────────────────────
+    if trans.sum() == 0:
+        raise ValueError(
+            "All transition values are zero. "
+            "Please check that your data cells contain numeric values."
+        )
+
+    if np.any(trans < 0):
+        raise ValueError(
+            "Negative values detected in the transition matrix. "
+            "All loan amounts should be non-negative."
+        )
+
     return prev, trans
 
 
-def cell_colors(val, ri, ci, prev):
-    if ri == ci:   return DIAG_BG, DIAG_FG
-    if val == 0:   return ZERO_BG, ZERO_FG
-    if ci < ri:    return UPG_BG,  UPG_FG
+def cell_colors(val: float, ri: int, ci: int, prev: np.ndarray):
+    """Return (background_color, foreground_color) for a matrix cell."""
+    if ri == ci:
+        return DIAG_BG, DIAG_FG
+    if val == 0:
+        return ZERO_BG, ZERO_FG
+    if ci < ri:
+        return UPG_BG, UPG_FG
     pct = val / prev[ri] * 100 if prev[ri] > 0 else 0
-    if pct < 5:    return MILD_BG, MILD_FG
-    if pct < 30:   return MOD_BG,  MOD_FG
+    if pct < 5:
+        return MILD_BG, MILD_FG
+    if pct < 30:
+        return MOD_BG, MOD_FG
     return SEV_BG, SEV_FG
 
 
 def draw_cell(ax, x, y, w, h, bg, lines, fgs,
               ec=GRID_EDGE, fs1=9.5, fs2=8.0,
               w1="bold", w2="normal", ha="center"):
+    """Draw a single matrix cell with optional two-line text."""
     ax.add_patch(mpatches.Rectangle(
         (x, y), w, h, lw=0.8, edgecolor=ec, facecolor=bg, zorder=2))
     tx = x + (0.10 if ha == "left" else 0.50) * w
     if len(lines) == 1:
-        ax.text(tx, y+h/2, lines[0], ha=ha, va="center",
+        ax.text(tx, y + h / 2, lines[0], ha=ha, va="center",
                 fontsize=fs1, color=fgs[0], fontweight=w1, zorder=3)
     else:
-        ax.text(tx, y+h*.64, lines[0], ha=ha, va="center",
+        ax.text(tx, y + h * .64, lines[0], ha=ha, va="center",
                 fontsize=fs1, color=fgs[0], fontweight=w1, zorder=3)
-        ax.text(tx, y+h*.29, lines[1], ha=ha, va="center",
+        ax.text(tx, y + h * .29, lines[1], ha=ha, va="center",
                 fontsize=fs2, color=fgs[1], fontweight=w2, zorder=3)
 
 
 def build_figure(grades, trans, prev, period):
+    """Build and return the full transition matrix matplotlib figure."""
     n = len(grades)
     col_closing = trans.sum(axis=0)
+
     RH, CW, HW = 0.95, 1.38, 2.45
     th = (n + 2) * RH
     tw = HW + n * CW
@@ -360,15 +412,18 @@ def build_figure(grades, trans, prev, period):
     ax.set_aspect("equal")
     ax.axis("off")
 
+    # ── Header row ────────────────────────────────────────────────────────
     ty = (n + 1) * RH
     draw_cell(ax, 0, ty, HW, RH, HEADER_BG,
               [f"Period: {period}", "Opening  →  Closing"],
               [TEXT_DARK, TEXT_MID], ha="left", fs1=9.6, fs2=8.0)
+
     for ci, g in enumerate(grades):
         draw_cell(ax, HW + ci * CW, ty, CW, RH, HEADER_BG,
                   [g, f"Closing: {col_closing[ci]:,.1f}"],
                   [TEXT_DARK, TEXT_MID], fs1=9.3, fs2=7.8)
 
+    # ── Data rows ─────────────────────────────────────────────────────────
     for ri in range(n):
         y = (n - ri) * RH
         draw_cell(ax, 0, y, HW, RH, ROW_HDR_BG,
@@ -386,12 +441,15 @@ def build_figure(grades, trans, prev, period):
                           [f"{v:,.2f}", f"({p:.1f}%)"],
                           [fg, fg], fs1=9.5, fs2=8.0)
 
+    # ── Outer border ──────────────────────────────────────────────────────
     ax.add_patch(mpatches.Rectangle(
         (0, 0), tw, th, fill=False, lw=1.15, edgecolor=OUTER_EDGE, zorder=4))
+
     ax.set_xlim(-.08, tw + .08)
     ax.set_ylim(-.08, th + .1)
 
-    legend = [
+    # ── Legend ────────────────────────────────────────────────────────────
+    legend_items = [
         (DIAG_BG, "Retained (diagonal)"),
         (UPG_BG,  "Upgrade"),
         (MILD_BG, "Mild downgrade <5%"),
@@ -399,12 +457,16 @@ def build_figure(grades, trans, prev, period):
         (SEV_BG,  "Severe >30%"),
         (ZERO_BG, "No flow"),
     ]
-    patches = [mpatches.Patch(facecolor=c, edgecolor=GRID_EDGE,
-               lw=.7, label=l) for c, l in legend]
-    leg = ax.legend(handles=patches, loc="upper center",
-                    bbox_to_anchor=(.5, -.07), ncol=3, fontsize=8.3,
-                    frameon=True, fancybox=False, edgecolor=GRID_EDGE,
-                    columnspacing=1.3, handlelength=1.5, borderpad=.6)
+    patches = [
+        mpatches.Patch(facecolor=c, edgecolor=GRID_EDGE, lw=.7, label=l)
+        for c, l in legend_items
+    ]
+    leg = ax.legend(
+        handles=patches, loc="upper center",
+        bbox_to_anchor=(.5, -.07), ncol=3, fontsize=8.3,
+        frameon=True, fancybox=False, edgecolor=GRID_EDGE,
+        columnspacing=1.3, handlelength=1.5, borderpad=.6
+    )
     leg.get_frame().set_facecolor(CANVAS_BG)
 
     fig.suptitle("Loan Quality Transition Matrix",
@@ -413,7 +475,8 @@ def build_figure(grades, trans, prev, period):
     return fig
 
 
-def fig_to_bytes(fig, fmt="png", dpi=220):
+def fig_to_bytes(fig, fmt: str = "png", dpi: int = 220) -> bytes:
+    """Convert matplotlib figure to bytes for download."""
     buf = io.BytesIO()
     fig.savefig(buf, format=fmt, dpi=dpi, bbox_inches="tight",
                 pad_inches=.15, facecolor=fig.get_facecolor())
@@ -421,24 +484,28 @@ def fig_to_bytes(fig, fmt="png", dpi=220):
     return buf.read()
 
 
-def compute_stats(trans, prev):
+def compute_stats(trans: np.ndarray, prev: np.ndarray) -> dict:
+    """Compute summary statistics from transition matrix."""
     n = len(prev)
     ret = sum(trans[i, i] for i in range(n))
     up  = sum(trans[r, c] for r in range(n) for c in range(r))
-    dn  = sum(trans[r, c] for r in range(n) for c in range(r+1, n))
+    dn  = sum(trans[r, c] for r in range(n) for c in range(r + 1, n))
     tot = trans.sum()
-    col_closing = trans.sum(axis=0)
     return dict(
-        total_opening=prev.sum(),
-        total_closing=tot,
-        col_closing=col_closing,
-        retained=ret, upgraded=up, downgraded=dn,
-        retention_pct=ret/tot*100 if tot else 0,
-        upgrade_pct=up/tot*100 if tot else 0,
-        downgrade_pct=dn/tot*100 if tot else 0)
+        total_opening=float(prev.sum()),
+        total_closing=float(tot),
+        col_closing=trans.sum(axis=0),
+        retained=float(ret),
+        upgraded=float(up),
+        downgraded=float(dn),
+        retention_pct=ret / tot * 100 if tot else 0,
+        upgrade_pct=up / tot * 100 if tot else 0,
+        downgrade_pct=dn / tot * 100 if tot else 0,
+    )
 
 
-def render_matrix_html(trans, prev):
+def render_matrix_html(trans: np.ndarray, prev: np.ndarray) -> str:
+    """Render the transition matrix as an HTML table string."""
     n = len(GRADES)
     col_closing = trans.sum(axis=0)
 
@@ -457,17 +524,17 @@ def render_matrix_html(trans, prev):
                 pct = v / prev[ri] * 100 if prev[ri] > 0 else 0
                 cls = "downgrade" if pct >= 5 else ""
             cells += f'<td class="{cls}">{v:,.2f}</td>'
-        row_sum = trans[ri].sum()
         cells += f'<td style="color:#5F5E5A">{prev[ri]:,.2f}</td>'
-        rows_html += (f'<tr><td class="row-hdr">'
-                      f'{ICONS[ri]} {GRADES[ri]}</td>{cells}</tr>')
+        rows_html += (
+            f'<tr><td class="row-hdr">'
+            f'{ICONS[ri]} {GRADES[ri]}</td>{cells}</tr>'
+        )
 
     total_cells = "".join(
         f'<td class="totals-row">{col_closing[ci]:,.2f}</td>'
         for ci in range(n)
     )
     total_cells += f'<td class="totals-row">{prev.sum():,.2f}</td>'
-
     headers = "".join(f"<th>{g}</th>" for g in GRADES)
 
     return f"""
@@ -493,7 +560,6 @@ def render_matrix_html(trans, prev):
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
-
 with st.sidebar:
     st.markdown("""
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
@@ -506,8 +572,10 @@ with st.sidebar:
     st.markdown("---")
 
     st.session_state.period = st.text_input(
-        "📅 Period Label", value=st.session_state.period,
-        placeholder="e.g. Poush 2081")
+        "📅 Period Label",
+        value=st.session_state.period,
+        placeholder="e.g. Poush 2081"
+    )
 
     export_dpi = st.select_slider(
         "🖼️ Export DPI", [100, 150, 220, 300], value=220)
@@ -516,26 +584,27 @@ with st.sidebar:
 
     if st.session_state.generated:
         if st.button("🔄 Upload New File", use_container_width=True):
-            st.session_state.prev = None
-            st.session_state.matrix = None
-            st.session_state.generated = False
-            st.session_state.upload_error = None
-            st.session_state.filename = None
+            for key in ["prev", "matrix", "generated", "upload_error", "filename"]:
+                st.session_state[key] = None if key != "generated" else False
             st.rerun()
 
     st.markdown("---")
+
     if st.session_state.generated and st.session_state.matrix is not None:
         st.markdown("### 📤 Export Data")
         exp_data = {
             "grades": GRADES,
             "period": st.session_state.period,
             "opening": st.session_state.prev.tolist(),
-            "transition": st.session_state.matrix.tolist()
+            "transition": st.session_state.matrix.tolist(),
         }
         st.download_button(
-            "⬇️ Export JSON", json.dumps(exp_data, indent=2),
-            "nrb_data.json", "application/json",
-            use_container_width=True)
+            "⬇️ Export JSON",
+            json.dumps(exp_data, indent=2),
+            "nrb_data.json",
+            "application/json",
+            use_container_width=True,
+        )
 
     st.markdown("---")
     st.markdown("""
@@ -549,7 +618,6 @@ with st.sidebar:
 
 
 # ── Header ────────────────────────────────────────────────────────────────────
-
 st.markdown("""
 <div class="gh-header">
     <h1>🏦 NRB Loan Classification — Transition Matrix</h1>
@@ -563,17 +631,15 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-
 # ── Tabs ──────────────────────────────────────────────────────────────────────
-
 tab_upload, tab_heatmap, tab_stats, tab_about = st.tabs(
-    ["📂 Upload Template", "📊 Heatmap", "📈 Statistics", "ℹ️ About"])
+    ["📂 Upload Template", "📊 Heatmap", "📈 Statistics", "ℹ️ About"]
+)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  TAB 1 — UPLOAD TEMPLATE
 # ══════════════════════════════════════════════════════════════════════════════
-
 with tab_upload:
 
     # ── Template format guide ─────────────────────────────────────────────
@@ -581,13 +647,13 @@ with tab_upload:
     <div class="template-card">
         <div class="template-card-title">📋 Expected Template Format</div>
         <pre>
-        | (blank)     | Good   | Watchlist | Substandard | Doubtful | Bad  | Grand Total |
-        |-------------|--------|-----------|-------------|----------|------|-------------|
-        | Good        | 3394.8 | 363.7     | 12.6        | 0        | 0    | 3771.1      |
-        | Watchlist   | 230.9  | 425.4     | 84.3        | 0        | 0    | 740.7       |
-        | Substandard | 24.6   | 20.3      | 23.8        | 53.0     | 0    | 121.7       |
-        | Doubtful    | 2.8    | 2.3       | 2.9         | 44.1     | 10.5 | 62.6        |
-        | Bad         | 20.6   | 0.4       | 0.1         | 0.3      | 247.8| 269.2       |
+| (blank)     | Good   | Watchlist | Substandard | Doubtful | Bad  | Grand Total |
+|-------------|--------|-----------|-------------|----------|------|-------------|
+| Good        | 3394.8 | 363.7     | 12.6        | 0        | 0    | 3771.1      |
+| Watchlist   | 230.9  | 425.4     | 84.3        | 0        | 0    | 740.7       |
+| Substandard | 24.6   | 20.3      | 23.8        | 53.0     | 0    | 121.7       |
+| Doubtful    | 2.8    | 2.3       | 2.9         | 44.1     | 10.5 | 62.6        |
+| Bad         | 20.6   | 0.4       | 0.1         | 0.3      | 247.8| 269.2       |
         </pre>
         <div style="color:#5F5E5A;font-size:12px;margin-top:8px;">
             ✅ Rows = Opening grade &nbsp;|&nbsp; Columns = Closing grade &nbsp;|&nbsp;
@@ -601,7 +667,7 @@ with tab_upload:
     # ── File uploader ─────────────────────────────────────────────────────
     if not st.session_state.generated:
         uploaded = st.file_uploader(
-            "Upload your Excel transition matrix template (.xlsx)",
+            "Upload your Excel transition matrix template (.xlsx / .xls)",
             type=["xlsx", "xls"],
             help="Upload an Excel file with grade rows and columns as shown above.",
             label_visibility="visible",
@@ -611,21 +677,21 @@ with tab_upload:
             file_bytes = uploaded.read()
             try:
                 prev, trans = parse_template(file_bytes)
-                st.session_state.prev = prev
-                st.session_state.matrix = trans
+                st.session_state.prev     = prev
+                st.session_state.matrix   = trans
                 st.session_state.filename = uploaded.name
                 st.session_state.upload_error = None
 
                 st.markdown(f"""
                 <div class="parse-success">
-                    ✅ Template parsed successfully: <b>{uploaded.name}</b> &nbsp;—&nbsp;
+                    ✅ Template parsed successfully: <b>{uploaded.name}</b> —
                     {N}×{N} matrix loaded, {int(prev.sum()):,} cr total opening balance.
                 </div>
                 """, unsafe_allow_html=True)
 
             except Exception as e:
                 st.session_state.upload_error = str(e)
-                st.session_state.prev = None
+                st.session_state.prev   = None
                 st.session_state.matrix = None
                 st.markdown(f"""
                 <div class="parse-error">
@@ -637,16 +703,18 @@ with tab_upload:
                 """, unsafe_allow_html=True)
 
     # ── Preview if parsed ─────────────────────────────────────────────────
-    if st.session_state.prev is not None and st.session_state.matrix is not None:
+    if (st.session_state.prev is not None
+            and st.session_state.matrix is not None):
+
         prev_arr  = st.session_state.prev
         trans_arr = st.session_state.matrix
 
         st.markdown("---")
         st.markdown("### 📊 Parsed Data Preview")
 
-        # Summary cards
         col_closing = trans_arr.sum(axis=0)
         sc1, sc2, sc3, sc4 = st.columns(4)
+
         with sc1:
             st.markdown(f"""
             <div class="gh-card">
@@ -654,6 +722,7 @@ with tab_upload:
                 <div class="gh-card-value gh-blue">{prev_arr.sum():,.1f}
                     <span style="font-size:12px;color:#7A7670;"> cr</span></div>
             </div>""", unsafe_allow_html=True)
+
         with sc2:
             st.markdown(f"""
             <div class="gh-card">
@@ -661,9 +730,10 @@ with tab_upload:
                 <div class="gh-card-value gh-blue">{trans_arr.sum():,.1f}
                     <span style="font-size:12px;color:#7A7670;"> cr</span></div>
             </div>""", unsafe_allow_html=True)
+
         with sc3:
-            retained = sum(trans_arr[i, i] for i in range(N))
-            ret_pct = retained / trans_arr.sum() * 100 if trans_arr.sum() else 0
+            retained  = sum(trans_arr[i, i] for i in range(N))
+            ret_pct   = retained / trans_arr.sum() * 100 if trans_arr.sum() else 0
             st.markdown(f"""
             <div class="gh-card">
                 <div class="gh-card-title">Retained on Diagonal</div>
@@ -671,8 +741,9 @@ with tab_upload:
                     <span style="font-size:12px;color:#7A7670;"> cr</span></div>
                 <div style="font-size:12px;color:#1565C0;">{ret_pct:.1f}% of total</div>
             </div>""", unsafe_allow_html=True)
+
         with sc4:
-            diff = abs(trans_arr.sum() - prev_arr.sum())
+            diff     = abs(trans_arr.sum() - prev_arr.sum())
             balanced = diff < 0.01
             st.markdown(f"""
             <div class="gh-card">
@@ -704,7 +775,6 @@ with tab_upload:
                 st.success("✅ Matrix generated! Switch to **📊 Heatmap** tab.")
 
     elif not st.session_state.generated:
-        # No file uploaded yet — show placeholder prompt
         st.markdown("""
         <div class="upload-box">
             <div class="upload-box-icon">📂</div>
@@ -728,45 +798,46 @@ with tab_upload:
 # ══════════════════════════════════════════════════════════════════════════════
 #  TAB 2 — HEATMAP
 # ══════════════════════════════════════════════════════════════════════════════
-
 with tab_heatmap:
     if not st.session_state.generated:
         st.info("👈 Upload a template in **📂 Upload Template** tab and click Generate.")
     else:
         prev_arr  = st.session_state.prev
         trans_arr = st.session_state.matrix
-        stats = compute_stats(trans_arr, prev_arr)
+        stats     = compute_stats(trans_arr, prev_arr)
 
+        # ── KPI Cards ─────────────────────────────────────────────────────
         k1, k2, k3, k4 = st.columns(4)
-        for col, title, val, sub, cls in [
+        kpi_data = [
             (k1, "Total Opening",  stats["total_opening"],
-                 "NPR Crore (row sum)",        "gh-blue"),
+             "NPR Crore (row sum)",         "gh-blue"),
             (k2, "Retained",       stats["retained"],
-                 f'↔ {stats["retention_pct"]:.1f}%', "gh-blue"),
+             f'↔ {stats["retention_pct"]:.1f}%',  "gh-blue"),
             (k3, "Upgraded",       stats["upgraded"],
-                 f'↑ {stats["upgrade_pct"]:.1f}%',   "gh-green"),
+             f'↑ {stats["upgrade_pct"]:.1f}%',    "gh-green"),
             (k4, "Downgraded",     stats["downgraded"],
-                 f'↓ {stats["downgrade_pct"]:.1f}%',  "gh-red"),
-        ]:
+             f'↓ {stats["downgrade_pct"]:.1f}%',  "gh-red"),
+        ]
+        for col, title, val, sub, cls in kpi_data:
             with col:
                 st.markdown(f"""
                 <div class="gh-card">
                     <div class="gh-card-title">{title}</div>
                     <div class="gh-card-value {cls}">{val:,.1f}</div>
-                    <div style="font-size:12px;margin-top:4px;"
-                         class="{cls}">{sub}</div>
+                    <div style="font-size:12px;margin-top:4px;" class="{cls}">{sub}</div>
                 </div>""", unsafe_allow_html=True)
 
         st.markdown('<hr class="gh-divider">', unsafe_allow_html=True)
 
+        # ── Closing Balances ──────────────────────────────────────────────
         col_closing = stats["col_closing"]
         st.markdown("#### Closing Balances by Grade (Column Sums)")
         cc = st.columns(N)
         for ci in range(N):
             with cc[ci]:
-                delta = col_closing[ci] - prev_arr[ci]
+                delta     = col_closing[ci] - prev_arr[ci]
                 delta_str = f"+{delta:,.1f}" if delta >= 0 else f"{delta:,.1f}"
-                delta_color = "#2E7D32" if delta >= 0 else "#C62828"
+                d_color   = "#2E7D32" if delta >= 0 else "#C62828"
                 st.markdown(f"""
                 <div class="gh-card">
                     <div class="gh-card-title">{ICONS[ci]} {GRADES[ci]}</div>
@@ -774,173 +845,155 @@ with tab_heatmap:
                         {col_closing[ci]:,.1f}
                         <span style="font-size:11px;color:#7A7670;"> cr</span>
                     </div>
-                    <div style="font-size:11px;color:{delta_color};">
+                    <div style="font-size:11px;color:{d_color};">
                         {delta_str} vs opening</div>
                 </div>""", unsafe_allow_html=True)
 
         st.markdown('<hr class="gh-divider">', unsafe_allow_html=True)
 
+        # ── Chart ─────────────────────────────────────────────────────────
         with st.spinner("🎨 Rendering matrix chart…"):
-            fig = build_figure(GRADES, trans_arr, prev_arr,
-                               st.session_state.period)
+            fig = build_figure(
+                GRADES, trans_arr, prev_arr, st.session_state.period)
 
         st.markdown('<div class="plot-box">', unsafe_allow_html=True)
         st.pyplot(fig, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('<hr class="gh-divider">', unsafe_allow_html=True)
+
+        # ── Downloads ─────────────────────────────────────────────────────
         d1, d2, _ = st.columns([1, 1, 2])
         with d1:
-            st.download_button("⬇️ Download PNG",
-                               fig_to_bytes(fig, "png", export_dpi),
-                               "nrb_matrix.png", "image/png",
-                               use_container_width=True)
+            st.download_button(
+                "⬇️ Download PNG",
+                fig_to_bytes(fig, "png", export_dpi),
+                "nrb_matrix.png", "image/png",
+                use_container_width=True,
+            )
         with d2:
-            st.download_button("⬇️ Download SVG",
-                               fig_to_bytes(fig, "svg", export_dpi),
-                               "nrb_matrix.svg", "image/svg+xml",
-                               use_container_width=True)
+            st.download_button(
+                "⬇️ Download SVG",
+                fig_to_bytes(fig, "svg", export_dpi),
+                "nrb_matrix.svg", "image/svg+xml",
+                use_container_width=True,
+            )
         plt.close(fig)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  TAB 3 — STATISTICS
 # ══════════════════════════════════════════════════════════════════════════════
-
 with tab_stats:
     if not st.session_state.generated:
         st.info("👈 Generate a matrix first.")
     else:
-        prev_arr  = st.session_state.prev
-        trans_arr = st.session_state.matrix
+        prev_arr    = st.session_state.prev
+        trans_arr   = st.session_state.matrix
         col_closing = trans_arr.sum(axis=0)
 
+        # ── Amounts Table ─────────────────────────────────────────────────
         st.markdown("### Transition Amounts (NPR Crore)")
         st.caption("Row sum = Opening balance | Column sum = Closing balance")
+
         df_a = pd.DataFrame(
             trans_arr.round(2),
             index=[f"{ICONS[i]} {GRADES[i]}" for i in range(N)],
-            columns=GRADES)
+            columns=GRADES,
+        )
         df_a["Row Sum (Opening)"] = trans_arr.sum(axis=1).round(2)
+
         closing_row = list(col_closing.round(2)) + [round(trans_arr.sum(), 2)]
-        df_closing = pd.DataFrame(
+        df_closing  = pd.DataFrame(
             [closing_row],
             index=["↓ Col Sum (Closing)"],
-            columns=df_a.columns)
+            columns=df_a.columns,
+        )
         df_combined = pd.concat([df_a, df_closing])
         st.dataframe(df_combined, use_container_width=True)
 
+        # ── Percentage Table ──────────────────────────────────────────────
         st.markdown("### Percentage of Opening (%)")
-        pct = [[trans_arr[r, c] / prev_arr[r] * 100
-                if prev_arr[r] > 0 else 0
-                for c in range(N)] for r in range(N)]
+        pct = [
+            [trans_arr[r, c] / prev_arr[r] * 100 if prev_arr[r] > 0 else 0
+             for c in range(N)]
+            for r in range(N)
+        ]
         df_p = pd.DataFrame(
             pct,
             index=[f"{ICONS[i]} {GRADES[i]}" for i in range(N)],
-            columns=GRADES).round(1)
-        st.dataframe(df_p.style.background_gradient(
-            cmap="RdYlGn_r", axis=None), use_container_width=True)
+            columns=GRADES,
+        ).round(1)
+        st.dataframe(
+            df_p.style.background_gradient(cmap="RdYlGn_r", axis=None),
+            use_container_width=True,
+        )
 
+        # ── Summary Table ─────────────────────────────────────────────────
         st.markdown("### Opening vs Closing by Grade")
         summary = pd.DataFrame({
-            "Grade": [f"{ICONS[i]} {GRADES[i]}" for i in range(N)],
+            "Grade":              [f"{ICONS[i]} {GRADES[i]}" for i in range(N)],
             "Opening (Row Sum)":  prev_arr.round(2),
             "Retained":           [round(trans_arr[i, i], 2) for i in range(N)],
             "Closing (Col Sum)":  col_closing.round(2),
-            "Retention %":        [round(trans_arr[i, i] / prev_arr[i] * 100, 1)
-                                   if prev_arr[i] > 0 else 0 for i in range(N)],
+            "Retention %":        [
+                round(trans_arr[i, i] / prev_arr[i] * 100, 1)
+                if prev_arr[i] > 0 else 0
+                for i in range(N)
+            ],
             "Net Change":         (col_closing - prev_arr).round(2),
         })
         st.dataframe(summary, use_container_width=True)
 
+        # ── Grade Detail Expanders ────────────────────────────────────────
         st.markdown("### Grade Details")
         for i in range(N):
             with st.expander(f"{ICONS[i]} {GRADES[i]}"):
-                ret = trans_arr[i, i]
-                up  = sum(trans_arr[i, c] for c in range(i))
-                dn  = sum(trans_arr[i, c] for c in range(i+1, N))
-                inf = sum(trans_arr[r, i] for r in range(N) if r != i)
-                opening_i  = prev_arr[i]
-                closing_i  = col_closing[i]
+                ret  = trans_arr[i, i]
+                up   = sum(trans_arr[i, c] for c in range(i))
+                dn   = sum(trans_arr[i, c] for c in range(i + 1, N))
+                inf  = sum(trans_arr[r, i] for r in range(N) if r != i)
                 m1, m2, m3, m4, m5, m6 = st.columns(6)
-                with m1: st.metric("Opening", f"{opening_i:,.2f} cr")
-                with m2: st.metric("Closing (col sum)", f"{closing_i:,.2f} cr")
-                with m3: st.metric("Retained", f"{ret:,.2f} cr")
-                with m4: st.metric("Upgraded out", f"{up:,.2f} cr")
-                with m5: st.metric("Downgraded out", f"{dn:,.2f} cr")
-                with m6: st.metric("Inflow from others", f"{inf:,.2f} cr")
+                with m1: st.metric("Opening",           f"{prev_arr[i]:,.2f} cr")
+                with m2: st.metric("Closing (col sum)", f"{col_closing[i]:,.2f} cr")
+                with m3: st.metric("Retained",          f"{ret:,.2f} cr")
+                with m4: st.metric("Upgraded out",      f"{up:,.2f} cr")
+                with m5: st.metric("Downgraded out",    f"{dn:,.2f} cr")
+                with m6: st.metric("Inflow from others",f"{inf:,.2f} cr")
 
+        # ── CSV Download ──────────────────────────────────────────────────
         st.markdown('<hr class="gh-divider">', unsafe_allow_html=True)
-        csv = io.StringIO()
-        df_combined.to_csv(csv)
-        st.download_button("⬇️ Download CSV", csv.getvalue(),
-                           "nrb_data.csv", "text/csv",
-                           use_container_width=True)
+        csv_buf = io.StringIO()
+        df_combined.to_csv(csv_buf)
+        st.download_button(
+            "⬇️ Download CSV", csv_buf.getvalue(),
+            "nrb_data.csv", "text/csv",
+            use_container_width=True,
+        )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  TAB 4 — ABOUT
 # ══════════════════════════════════════════════════════════════════════════════
-
 with tab_about:
     st.markdown("""
-    ## ℹ️ About
+## ℹ️ About
 
-    ### How to Use
+### How to Use
 
-    1. **Upload** your Excel template in the **📂 Upload Template** tab.
-    2. The app auto-detects the header row and grade labels — no manual mapping needed.
-    3. Set a **Period Label** in the sidebar (e.g. *Poush 2081*).
-    4. Click **🚀 Generate Transition Matrix**.
-    5. Explore the **📊 Heatmap** and **📈 Statistics** tabs.
-    6. Download PNG, SVG, or CSV exports as needed.
+1. **Upload** your Excel template in the **📂 Upload Template** tab.
+2. The app auto-detects the header row and grade labels — no manual mapping needed.
+3. Set a **Period Label** in the sidebar (e.g. *Poush 2081*).
+4. Click **🚀 Generate Transition Matrix**.
+5. Explore the **📊 Heatmap** and **📈 Statistics** tabs.
+6. Download PNG, SVG, or CSV exports as needed.
 
-    ### Template Format
+### Template Format
 
-    Your Excel file should have:
-    - A **header row** containing the 5 grade names: `Good`, `Watchlist`, `Substandard`, `Doubtful`, `Bad`
-    - **5 data rows** with each row starting with its grade name
-    - Cell values = amount flowing from the row grade (opening) to the column grade (closing)
-    - An optional **Grand Total** column (ignored by the parser)
+Your Excel file should have:
+- A **header row** containing the 5 grade names: `Good`, `Watchlist`, `Substandard`, `Doubtful`, `Bad`
+- **5 data rows** with each row starting with its grade name
+- Cell values = amount flowing from the row grade (opening) to the column grade (closing)
+- An optional **Grand Total** column (ignored by the parser)
 
-    ### Matrix Logic
-
-    ```
-    ROWS    = Opening grade   →   Row sum  = Opening balance
-    COLUMNS = Closing grade   →   Col sum  = Closing balance
-
-    Example (Substandard row):
-    ┌──────────────────────────────────────────────┐
-    │  Opening: 121.68 cr                          │
-    │                                              │
-    │  → Good ............  24.60   (upgrade)      │
-    │  → Watchlist ........ 20.29   (upgrade)      │
-    │  → Substandard ...... 23.81   (retained) ✦   │
-    │  → Doubtful .........  52.99  (downgrade)    │
-    │  → Bad ..............   0.00                 │
-    │                        ──────                │
-    │  Row sum (Opening): 121.68 ✅                 │
-    └──────────────────────────────────────────────┘
-    ```
-
-    ### Color Legend
-
-    | Color | Meaning |
-    |-------|---------|
-    | 🔵 Blue diagonal | Retained |
-    | 🟢 Green | Upgrade (better grade) |
-    | 🟡 Amber | Mild downgrade <5% of opening |
-    | 🟠 Coral | Moderate downgrade 5–30% |
-    | 🔴 Red | Severe downgrade >30% |
-    | ⬜ Gray | No flow (zero) |
-
-    ### NRB Grade Definitions
-
-    | Grade | Status | Typical Overdue |
-    |-------|--------|-----------------|
-    | Good | Performing | Current |
-    | Watchlist | Special mention | 1–3 months |
-    | Substandard | Classified | 3–6 months |
-    | Doubtful | Impaired | 6–12 months |
-    | Bad | Loss / write-off | 12+ months |
-    """)
+### Matrix Logic
