@@ -15,21 +15,27 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── GitHub Dark CSS ───────────────────────────────────────────────────────────
+# ── CSS ───────────────────────────────────────────────────────────────────────
 
 st.markdown("""
 <style>
-    .stApp { background-color: #0d1117; color: #c9d1d9; }
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap');
+
+    .stApp { background-color: #0d1117; color: #c9d1d9;
+             font-family: 'IBM Plex Sans', sans-serif; }
     .main .block-container { background-color: #0d1117; padding-top: 1.5rem; }
+
     [data-testid="stSidebar"] {
         background-color: #161b22; border-right: 1px solid #30363d;
     }
     [data-testid="stSidebar"] * { color: #c9d1d9 !important; }
+
     h1,h2,h3,h4,h5,h6 {
         color: #f0f6fc !important;
-        font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial !important;
+        font-family: 'IBM Plex Sans', sans-serif !important;
     }
 
+    /* ── Cards ── */
     .gh-card {
         background: #161b22; border: 1px solid #30363d;
         border-radius: 6px; padding: 14px 18px; margin: 6px 0;
@@ -37,11 +43,13 @@ st.markdown("""
     .gh-card-title {
         color: #8b949e; font-size: 11px; font-weight: 600;
         text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px;
+        font-family: 'IBM Plex Mono', monospace;
     }
     .gh-card-value { color: #f0f6fc; font-size: 24px; font-weight: 700; }
     .gh-green { color: #3fb950; } .gh-red { color: #f85149; }
     .gh-blue  { color: #58a6ff; } .gh-amber { color: #d29922; }
 
+    /* ── Header ── */
     .gh-header {
         background: linear-gradient(135deg,#161b22,#0d1117);
         border: 1px solid #30363d; border-radius: 6px;
@@ -50,6 +58,7 @@ st.markdown("""
     .gh-header h1 { font-size: 26px !important; margin: 0 0 6px !important; }
     .gh-header p  { color: #8b949e; font-size: 13px; margin: 0; }
 
+    /* ── Badges ── */
     .badge {
         display: inline-block; padding: 2px 8px; border-radius: 12px;
         font-size: 11px; font-weight: 600; margin-right: 4px;
@@ -57,52 +66,166 @@ st.markdown("""
     .badge-blue  { background: #1f6feb; color: #f0f6fc; }
     .badge-green { background: #238636; color: #f0f6fc; }
 
+    /* ── Plot Box ── */
     .plot-box {
         background: #161b22; border: 1px solid #30363d;
         border-radius: 6px; padding: 16px; margin-top: 12px;
     }
     .gh-divider { border: none; border-top: 1px solid #21262d; margin: 16px 0; }
 
+    /* ── Buttons ── */
     .stButton>button {
         background: #238636; color: #f0f6fc;
         border: 1px solid rgba(240,246,252,.1);
         border-radius: 6px; font-weight: 600; padding: 8px 20px;
+        font-family: 'IBM Plex Sans', sans-serif;
+        transition: background 0.15s ease;
     }
     .stButton>button:hover { background: #2ea043; }
     .stDownloadButton>button {
         background: #21262d; color: #c9d1d9;
         border: 1px solid #30363d; border-radius: 6px;
-    }
-    div[data-baseweb="input"] input {
-        background: #0d1117 !important; border: 1px solid #30363d !important;
-        color: #c9d1d9 !important; border-radius: 6px !important;
+        font-family: 'IBM Plex Sans', sans-serif;
     }
 
+    /* ── Number Inputs — Smart & Clickable ── */
+    div[data-baseweb="input"] input {
+        background: #0d1117 !important;
+        border: 1.5px solid #30363d !important;
+        color: #f0f6fc !important;
+        border-radius: 6px !important;
+        font-family: 'IBM Plex Mono', monospace !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        text-align: center !important;
+        cursor: text !important;
+        padding: 8px 4px !important;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease,
+                    background 0.15s ease !important;
+        -moz-appearance: textfield !important;
+    }
+    div[data-baseweb="input"] input:hover {
+        border-color: #58a6ff !important;
+        background: #0d1117 !important;
+    }
+    div[data-baseweb="input"] input:focus {
+        border-color: #58a6ff !important;
+        box-shadow: 0 0 0 3px rgba(88,166,255,0.18) !important;
+        background: #161b22 !important;
+        outline: none !important;
+    }
+    /* Remove spinner arrows */
+    div[data-baseweb="input"] input::-webkit-outer-spin-button,
+    div[data-baseweb="input"] input::-webkit-inner-spin-button {
+        -webkit-appearance: none !important;
+        margin: 0 !important;
+    }
+    /* Step buttons styling */
+    div[data-baseweb="input"] button {
+        background: #21262d !important;
+        border-color: #30363d !important;
+        color: #8b949e !important;
+        transition: background 0.1s ease, color 0.1s ease !important;
+    }
+    div[data-baseweb="input"] button:hover {
+        background: #30363d !important;
+        color: #f0f6fc !important;
+    }
+
+    /* ── Tabs ── */
     .stTabs [data-baseweb="tab-list"] {
         background: #0d1117; border-bottom: 1px solid #21262d;
     }
-    .stTabs [data-baseweb="tab"] { color: #8b949e; background: transparent; }
+    .stTabs [data-baseweb="tab"] {
+        color: #8b949e; background: transparent;
+        font-family: 'IBM Plex Sans', sans-serif;
+    }
     .stTabs [aria-selected="true"] {
         color: #f0f6fc !important; border-bottom: 2px solid #f78166 !important;
     }
 
+    /* ── Grade Blocks ── */
     .grade-block {
         background: #161b22; border: 1px solid #30363d;
-        border-radius: 8px; padding: 20px; margin-bottom: 16px;
+        border-radius: 8px; padding: 16px 20px; margin-bottom: 12px;
+        display: flex; align-items: center; gap: 10px;
     }
+    .grade-block-title {
+        color: #f0f6fc; font-size: 17px; font-weight: 700;
+        font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .grade-block-sub {
+        color: #8b949e; font-size: 12px; margin-top: 2px;
+    }
+
+    /* ── Remaining Tracker ── */
     .remaining-ok   { color: #3fb950; font-weight: 700; }
     .remaining-warn { color: #f85149; font-weight: 700; }
     .remaining-left { color: #d29922; font-weight: 700; }
 
-    .flow-arrow {
-        color: #484f58; font-size: 18px; text-align: center;
-        padding-top: 30px;
+    /* ── Matrix Summary Table ── */
+    .matrix-summary {
+        background: #161b22; border: 1px solid #30363d;
+        border-radius: 8px; overflow: hidden; margin-top: 16px;
+    }
+    .matrix-summary table {
+        width: 100%; border-collapse: collapse;
+        font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    }
+    .matrix-summary th {
+        background: #21262d; color: #8b949e; padding: 8px 12px;
+        text-align: center; font-weight: 600; letter-spacing: .3px;
+        border-bottom: 1px solid #30363d;
+    }
+    .matrix-summary td {
+        padding: 7px 12px; text-align: center;
+        border-bottom: 1px solid #21262d; color: #c9d1d9;
+    }
+    .matrix-summary tr:last-child td { border-bottom: none; }
+    .matrix-summary td.diag { color: #58a6ff; font-weight: 700; }
+    .matrix-summary td.upgrade { color: #3fb950; }
+    .matrix-summary td.downgrade { color: #f85149; }
+    .matrix-summary td.zero { color: #484f58; }
+    .matrix-summary td.row-hdr {
+        text-align: left; color: #f0f6fc; font-weight: 600;
+        background: #161b22; padding-left: 14px;
+    }
+    .matrix-summary td.totals-row {
+        background: #0d1117; color: #58a6ff; font-weight: 700;
+        border-top: 2px solid #30363d;
+    }
+    .matrix-summary td.totals-hdr {
+        background: #0d1117; color: #8b949e; font-weight: 700;
+        text-align: left; padding-left: 14px;
+        border-top: 2px solid #30363d;
     }
 
+    /* ── Scrollbar ── */
     ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: #0d1117; }
     ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+
+    /* ── Label styling ── */
+    .stNumberInput label {
+        font-family: 'IBM Plex Sans', sans-serif !important;
+        font-size: 11px !important;
+        color: #8b949e !important;
+        font-weight: 600 !important;
+    }
+    .stTextInput label {
+        font-family: 'IBM Plex Sans', sans-serif !important;
+        color: #8b949e !important;
+    }
 </style>
+
+<script>
+// Auto-select all text when clicking a number input for smart entry
+document.addEventListener('focusin', function(e) {
+    if (e.target && e.target.type === 'number') {
+        setTimeout(() => e.target.select(), 10);
+    }
+});
+</script>
 """, unsafe_allow_html=True)
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -130,6 +253,7 @@ ZERO_BG, ZERO_FG = "#F1EFE8", "#888780"
 MILD_BG, MILD_FG = "#FAEEDA", "#412402"
 MOD_BG,  MOD_FG  = "#F0997B", "#4A1B0C"
 SEV_BG,  SEV_FG  = "#A32D2D", "#FCEBEB"
+CLOSE_BG, CLOSE_FG = "#E8E6DF", "#2C2C2A"
 TEXT_DARK, TEXT_MID = "#2C2C2A", "#5F5E5A"
 
 plt.rcParams.update({"font.family": "DejaVu Sans", "figure.dpi": 140})
@@ -174,48 +298,79 @@ def draw_cell(ax, x, y, w, h, bg, lines, fgs,
 
 
 def build_figure(grades, trans, prev, period):
+    """
+    Rows = opening grade (row header shows opening balance)
+    Columns = closing grade (column header shows CLOSING = sum of column)
+    Extra bottom row = closing totals per column
+    """
     n = len(grades)
-    ct = trans.sum(axis=0)
-    RH, CW, HW = 0.95, 1.28, 2.35
-    th, tw = (n+1)*RH, HW+n*CW
+    # Column closing totals = sum of each column
+    col_closing = trans.sum(axis=0)
+    # Row opening totals = prev (opening balance per grade)
+    RH, CW, HW = 0.95, 1.38, 2.45
+    # +1 row for closing totals row at bottom
+    th = (n + 2) * RH
+    tw = HW + n * CW
 
-    fig, ax = plt.subplots(figsize=(tw+.7, th+1.8))
+    fig, ax = plt.subplots(figsize=(tw + .7, th + 1.8))
     fig.patch.set_facecolor(CANVAS_BG)
-    ax.set_facecolor(CANVAS_BG); ax.set_aspect("equal"); ax.axis("off")
+    ax.set_facecolor(CANVAS_BG)
+    ax.set_aspect("equal")
+    ax.axis("off")
 
-    ty = n*RH
+    # ── Top header row (grade column headers) ─────────────────────────────
+    ty = (n + 1) * RH
     draw_cell(ax, 0, ty, HW, RH, HEADER_BG,
-              [f"From {period}", "Opening total"],
-              [TEXT_DARK, TEXT_MID], ha="left", fs1=9.6)
+              [f"Period: {period}", "Opening  →  Closing"],
+              [TEXT_DARK, TEXT_MID], ha="left", fs1=9.6, fs2=8.0)
     for ci, g in enumerate(grades):
-        draw_cell(ax, HW+ci*CW, ty, CW, RH, HEADER_BG,
-                  [g, f"Closing: {int(ct[ci]):,} cr"],
+        draw_cell(ax, HW + ci * CW, ty, CW, RH, HEADER_BG,
+                  [g, f"Closing: {int(col_closing[ci]):,} cr"],
                   [TEXT_DARK, TEXT_MID], fs1=9.3, fs2=7.8)
 
+    # ── Data rows ─────────────────────────────────────────────────────────
     for ri in range(n):
-        y = (n-1-ri)*RH
+        y = (n - ri) * RH   # row 0 = top data row
         draw_cell(ax, 0, y, HW, RH, ROW_HDR_BG,
                   [grades[ri], f"Opening: {int(prev[ri]):,} cr"],
                   [TEXT_DARK, TEXT_MID], ha="left")
         for ci in range(n):
             v = trans[ri, ci]
             bg, fg = cell_colors(v, ri, ci, prev)
-            p = v/prev[ri]*100 if prev[ri] > 0 else 0
+            p = v / prev[ri] * 100 if prev[ri] > 0 else 0
             if v == 0 and ri != ci:
-                draw_cell(ax, HW+ci*CW, y, CW, RH, bg,
+                draw_cell(ax, HW + ci * CW, y, CW, RH, bg,
                           ["—"], [ZERO_FG], fs1=10, w1="normal")
             else:
-                draw_cell(ax, HW+ci*CW, y, CW, RH, bg,
+                draw_cell(ax, HW + ci * CW, y, CW, RH, bg,
                           [f"{int(v):,}", f"({p:.1f}%)"],
                           [fg, fg], fs1=10, fs2=8.2)
 
+    # ── Bottom closing-totals row ──────────────────────────────────────────
+    y_bottom = 0
+    draw_cell(ax, 0, y_bottom, HW, RH, "#D8D4CB",
+              ["Closing Total", "(Sum of column)"],
+              [TEXT_DARK, TEXT_MID], ha="left", fs1=9.0, fs2=7.8)
+    for ci in range(n):
+        draw_cell(ax, HW + ci * CW, y_bottom, CW, RH, DIAG_BG,
+                  [f"{int(col_closing[ci]):,} cr", "↑ closing"],
+                  [DIAG_FG, DIAG_FG], fs1=10, fs2=8.0)
+
+    # ── Outer border ──────────────────────────────────────────────────────
     ax.add_patch(mpatches.Rectangle(
         (0, 0), tw, th, fill=False, lw=1.15, edgecolor=OUTER_EDGE, zorder=4))
-    ax.set_xlim(-.08, tw+.08); ax.set_ylim(-.08, th+.1)
+    ax.set_xlim(-.08, tw + .08)
+    ax.set_ylim(-.08, th + .1)
 
-    legend = [(DIAG_BG,"Retained"),(UPG_BG,"Upgrade"),
-              (MILD_BG,"Mild ↓ <5%"),(MOD_BG,"Moderate ↓ 5–30%"),
-              (SEV_BG,"Severe ↓ >30%"),(ZERO_BG,"No flow")]
+    # ── Legend ────────────────────────────────────────────────────────────
+    legend = [
+        (DIAG_BG, "Retained (diagonal)"),
+        (UPG_BG,  "Upgrade"),
+        (MILD_BG, "Mild downgrade <5%"),
+        (MOD_BG,  "Moderate 5–30%"),
+        (SEV_BG,  "Severe >30%"),
+        (ZERO_BG, "No flow"),
+    ]
     patches = [mpatches.Patch(facecolor=c, edgecolor=GRID_EDGE,
                lw=.7, label=l) for c, l in legend]
     leg = ax.legend(handles=patches, loc="upper center",
@@ -226,9 +381,10 @@ def build_figure(grades, trans, prev, period):
 
     fig.suptitle("NRB Loan Classification — Transition Matrix",
                  fontsize=13, fontweight="bold", y=.98, color=TEXT_DARK)
-    ax.set_title("Rows = opening grade | Columns = closing grade | "
-                 "Cells = NPR crore (% of opening)",
-                 fontsize=8.8, color=TEXT_MID, pad=8)
+    ax.set_title(
+        "Rows = opening grade (→ row sum = opening) | "
+        "Columns = closing grade (↓ col sum = closing)",
+        fontsize=8.5, color=TEXT_MID, pad=8)
     plt.tight_layout(rect=(0, .05, 1, .94))
     return fig
 
@@ -247,12 +403,81 @@ def compute_stats(trans, prev):
     up  = sum(trans[r, c] for r in range(n) for c in range(r))
     dn  = sum(trans[r, c] for r in range(n) for c in range(r+1, n))
     tot = trans.sum()
+    col_closing = trans.sum(axis=0)
     return dict(
-        total_opening=int(prev.sum()), total_closing=int(tot),
+        total_opening=int(prev.sum()),
+        total_closing=int(tot),
+        col_closing=col_closing,
         retained=int(ret), upgraded=int(up), downgraded=int(dn),
         retention_pct=ret/tot*100 if tot else 0,
         upgrade_pct=up/tot*100 if tot else 0,
         downgrade_pct=dn/tot*100 if tot else 0)
+
+
+def render_matrix_html(trans, prev):
+    """Render the live matrix preview as HTML with row=opening, col=closing."""
+    n = len(GRADES)
+    col_closing = trans.sum(axis=0)
+
+    rows_html = ""
+    for ri in range(n):
+        cells = ""
+        for ci in range(n):
+            v = int(trans[ri, ci])
+            if ri == ci:
+                cls = "diag"
+            elif ci < ri:
+                cls = "upgrade"
+            elif v == 0:
+                cls = "zero"
+            else:
+                pct = v / prev[ri] * 100 if prev[ri] > 0 else 0
+                cls = "upgrade" if ci < ri else (
+                    "zero" if v == 0 else
+                    ("" if pct < 5 else "downgrade"))
+            cells += f'<td class="{cls}">{v:,}</td>'
+        row_sum = int(sum(trans[ri]))
+        remaining = int(prev[ri]) - row_sum
+        rem_style = ("color:#3fb950" if remaining == 0 else
+                     "color:#f85149" if remaining < 0 else "color:#d29922")
+        cells += (f'<td style="color:#8b949e">{int(prev[ri]):,}</td>'
+                  f'<td style="{rem_style};font-weight:700">'
+                  f'{remaining:+,}</td>')
+        rows_html += (f'<tr><td class="row-hdr">'
+                      f'{ICONS[ri]} {GRADES[ri]}</td>{cells}</tr>')
+
+    # Closing totals row (column sums)
+    total_cells = ""
+    for ci in range(n):
+        total_cells += (f'<td class="totals-row">'
+                        f'{int(col_closing[ci]):,}</td>')
+    total_cells += (f'<td class="totals-row">{int(prev.sum()):,}</td>'
+                    f'<td class="totals-row">—</td>')
+
+    headers = "".join(f"<th>{g}</th>" for g in GRADES)
+
+    html = f"""
+    <div class="matrix-summary">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left;padding-left:14px;">From \\ To</th>
+            {headers}
+            <th>Opening</th>
+            <th>Remaining</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows_html}
+          <tr>
+            <td class="totals-hdr">↓ Closing Total</td>
+            {total_cells}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    """
+    return html
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -275,7 +500,8 @@ with st.sidebar:
             0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013
             8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
         </svg>
-        <span style="color:#f0f6fc;font-size:18px;font-weight:700;">
+        <span style="color:#f0f6fc;font-size:18px;font-weight:700;
+                     font-family:'IBM Plex Sans',sans-serif;">
             NRB Matrix Tool</span>
     </div>
     """, unsafe_allow_html=True)
@@ -295,25 +521,27 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
-    st.markdown("### 📤 Import / Export")
-    exp = {"grades": GRADES, "period": st.session_state.period,
-           "opening": st.session_state.prev,
-           "transition": st.session_state.matrix}
-    st.download_button("⬇️ Export JSON", json.dumps(exp, indent=2),
-                       "nrb_data.json", "application/json",
-                       use_container_width=True)
+    st.markdown("### 📤 Export Data")
+    exp_data = {
+        "grades": GRADES,
+        "period": st.session_state.period,
+        "opening": st.session_state.prev,
+        "transition": st.session_state.matrix
+    }
+    st.download_button(
+        "⬇️ Export JSON", json.dumps(exp_data, indent=2),
+        "nrb_data.json", "application/json",
+        use_container_width=True)
 
-    up = st.file_uploader("⬆️ Import JSON", type=["json"])
-    if up:
-        try:
-            d = json.load(up)
-            st.session_state.prev = d["opening"]
-            st.session_state.matrix = d["transition"]
-            if "period" in d:
-                st.session_state.period = d["period"]
-            st.success("✅ Imported!"); st.rerun()
-        except Exception as e:
-            st.error(f"❌ {e}")
+    st.markdown("---")
+    st.markdown("""
+    <div style="color:#484f58;font-size:11px;line-height:1.6;
+                font-family:'IBM Plex Mono',monospace;">
+        <b style="color:#8b949e;">Row sum</b> = Opening balance<br>
+        <b style="color:#8b949e;">Col sum</b> = Closing balance<br>
+        <b style="color:#8b949e;">Diagonal</b> = Retained loans
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ── Header ────────────────────────────────────────────────────────────────────
@@ -321,10 +549,12 @@ with st.sidebar:
 st.markdown("""
 <div class="gh-header">
     <h1>🏦 NRB Loan Classification — Transition Matrix</h1>
-    <p>Enter opening balance per grade → distribute to closing grades →
-       matrix builds automatically
-       <span class="badge badge-blue">Simplified</span>
-       <span class="badge badge-green">One-Pass Entry</span>
+    <p>
+        Enter opening balance per grade → distribute across closing grades →
+        <strong style="color:#f0f6fc;">Row sum = Opening</strong> |
+        <strong style="color:#58a6ff;">Column sum = Closing</strong>
+        <span class="badge badge-blue">NRB Standard</span>
+        <span class="badge badge-green">Auto Totals</span>
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -337,60 +567,75 @@ tab_entry, tab_heatmap, tab_stats, tab_about = st.tabs(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  TAB 1 — SIMPLIFIED DATA ENTRY
+#  TAB 1 — DATA ENTRY
 # ══════════════════════════════════════════════════════════════════════════════
 
 with tab_entry:
     st.markdown("""
-    ## 📝 Simple One-Pass Entry
-
-    **How it works:**
-    1. Enter **opening balance** for each grade
-    2. For each grade, **distribute** the opening into closing categories
-    3. A live **remaining tracker** ensures you allocate exactly the opening
-    4. Hit **Generate** — done!
-    """)
+    <div style="background:#161b22;border:1px solid #30363d;border-radius:6px;
+                padding:14px 18px;margin-bottom:20px;">
+        <div style="color:#f0f6fc;font-size:14px;font-weight:600;
+                    margin-bottom:6px;">📐 How the matrix works</div>
+        <div style="color:#8b949e;font-size:12px;line-height:1.7;
+                    font-family:'IBM Plex Mono',monospace;">
+            <b style="color:#c9d1d9;">Rows</b> = Opening grade &nbsp;|&nbsp;
+            <b style="color:#c9d1d9;">Columns</b> = Closing grade &nbsp;|&nbsp;
+            <b style="color:#3fb950;">Row sum = Opening balance</b> &nbsp;|&nbsp;
+            <b style="color:#58a6ff;">Column sum = Closing balance</b>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     all_valid = True
 
     for ri in range(N):
+        # Grade header
+        grade_color = ["#3fb950", "#d29922", "#f0883e", "#f85149", "#8b949e"][ri]
         st.markdown(f"""
         <div class="grade-block">
-            <span style="font-size:20px;">{ICONS[ri]}</span>
-            <span style="color:#f0f6fc;font-size:18px;font-weight:700;">
-                {GRADES[ri]}
-            </span>
+            <span style="font-size:22px;">{ICONS[ri]}</span>
+            <div>
+                <div class="grade-block-title"
+                     style="color:{grade_color};">{GRADES[ri]}</div>
+                <div class="grade-block-sub">
+                    Distribute opening balance → across all closing grades
+                    (row sum must equal opening)
+                </div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
-        # ── Opening Balance ───────────────────────────────────────────────
-
-        oc1, oc2 = st.columns([1, 3])
-        with oc1:
+        # Opening Balance
+        col_open, col_info = st.columns([1, 3])
+        with col_open:
             opening = st.number_input(
                 f"Opening Balance (cr)",
-                min_value=0, max_value=999999,
+                min_value=0, max_value=9_999_999,
                 value=int(st.session_state.prev[ri]),
                 step=10, key=f"op_{ri}",
-                help=f"Total {GRADES[ri]} loans at period start")
+                help=f"Total {GRADES[ri]} loan portfolio at period start (NPR Crore)")
             st.session_state.prev[ri] = opening
 
-        # ── Distribution to Closing Grades ────────────────────────────────
+        with col_info:
+            st.markdown(f"""
+            <div style="padding-top:32px;color:#8b949e;font-size:12px;
+                        font-family:'IBM Plex Mono',monospace;">
+                Distribute <b style="color:#f0f6fc;">{opening:,} cr</b>
+                across the 5 closing grades below. Click any field to edit.
+            </div>
+            """, unsafe_allow_html=True)
 
-        with oc2:
-            st.caption(f"Distribute {opening:,} cr across closing grades:")
-
+        # Distribution inputs (5 closing grade columns + remaining)
         dist_cols = st.columns(N + 1)
 
         row_vals = []
         for ci in range(N):
             with dist_cols[ci]:
-                # Determine smart default: diagonal gets most
                 default_val = int(st.session_state.matrix[ri][ci])
 
-                label = GRADES[ci]
+                # Label with direction indicator
                 if ci == ri:
-                    label = f"✦ {GRADES[ci]} (same)"
+                    label = f"✦ {GRADES[ci]}"
                 elif ci < ri:
                     label = f"↑ {GRADES[ci]}"
                 else:
@@ -399,16 +644,17 @@ with tab_entry:
                 v = st.number_input(
                     label,
                     min_value=0,
-                    max_value=max(opening, 999999),
-                    value=min(default_val, opening),
+                    max_value=max(opening, 9_999_999),
+                    value=min(default_val, max(opening, 0)),
                     step=5,
-                    key=f"d_{ri}_{ci}")
+                    key=f"d_{ri}_{ci}",
+                    help=f"Amount flowing from {GRADES[ri]} (opening) "
+                         f"to {GRADES[ci]} (closing)")
                 row_vals.append(v)
 
         st.session_state.matrix[ri] = row_vals
 
-        # ── Remaining Tracker ─────────────────────────────────────────────
-
+        # Remaining tracker
         allocated = sum(row_vals)
         remaining = opening - allocated
 
@@ -416,69 +662,71 @@ with tab_entry:
             if remaining == 0:
                 cls = "remaining-ok"
                 icon = "✅"
-                msg = "Fully allocated"
+                msg = "Balanced"
+                bar_color = "#3fb950"
             elif remaining > 0:
                 cls = "remaining-left"
                 icon = "🔸"
-                msg = f"{remaining:,} cr left"
+                msg = f"{remaining:,} unallocated"
                 all_valid = False
+                bar_color = "#d29922"
             else:
                 cls = "remaining-warn"
                 icon = "⚠️"
-                msg = f"{abs(remaining):,} cr over"
+                msg = f"{abs(remaining):,} over-allocated"
                 all_valid = False
+                bar_color = "#f85149"
+
+            pct_used = min(allocated / opening * 100, 100) if opening > 0 else 0
 
             st.markdown(f"""
-            <div style="padding-top:24px;text-align:center;">
+            <div style="padding-top:22px;text-align:center;">
                 <div style="color:#8b949e;font-size:10px;
-                            text-transform:uppercase;letter-spacing:.5px;">
+                            text-transform:uppercase;letter-spacing:.6px;
+                            font-family:'IBM Plex Mono',monospace;">
                     Remaining</div>
-                <div class="{cls}" style="font-size:20px;margin:4px 0;">
+                <div class="{cls}" style="font-size:19px;margin:4px 0;
+                             font-family:'IBM Plex Mono',monospace;">
                     {icon} {remaining:,}
                 </div>
-                <div style="color:#8b949e;font-size:11px;">{msg}</div>
-                <div style="color:#484f58;font-size:10px;margin-top:4px;">
-                    {allocated:,} / {opening:,} cr
+                <div style="color:#8b949e;font-size:10px;">{msg}</div>
+                <div style="color:#484f58;font-size:10px;margin-top:3px;
+                            font-family:'IBM Plex Mono',monospace;">
+                    {allocated:,} / {opening:,}</div>
+                <div style="background:#21262d;border-radius:4px;height:5px;
+                            margin-top:7px;overflow:hidden;">
+                    <div style="background:{bar_color};height:100%;
+                                width:{pct_used:.1f}%;border-radius:4px;
+                                transition:width .3s;"></div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            # Progress bar visual
-            pct_used = min(allocated / opening * 100, 100) if opening > 0 else 0
-            bar_color = "#3fb950" if remaining == 0 else (
-                "#d29922" if remaining > 0 else "#f85149")
-            st.markdown(f"""
-            <div style="background:#21262d;border-radius:4px;height:6px;
-                        margin-top:8px;overflow:hidden;">
-                <div style="background:{bar_color};height:100%;
-                            width:{pct_used}%;border-radius:4px;
-                            transition:width .3s;"></div>
             </div>
             """, unsafe_allow_html=True)
 
         st.markdown('<hr class="gh-divider">', unsafe_allow_html=True)
 
-    # ── Grand Summary Before Generate ─────────────────────────────────────
+    # ── Grand Summary ─────────────────────────────────────────────────────
 
-    total_opening  = sum(st.session_state.prev)
-    trans_arr      = np.array(st.session_state.matrix, dtype=float)
+    total_opening   = sum(st.session_state.prev)
+    trans_arr       = np.array(st.session_state.matrix, dtype=float)
     total_allocated = int(trans_arr.sum())
     total_remaining = int(total_opening - total_allocated)
+    prev_arr        = np.array(st.session_state.prev, dtype=float)
+    col_closing     = trans_arr.sum(axis=0)
 
-    sc1, sc2, sc3 = st.columns(3)
+    sc1, sc2, sc3, sc4 = st.columns(4)
     with sc1:
         st.markdown(f"""
         <div class="gh-card">
-            <div class="gh-card-title">Total Opening</div>
-            <div class="gh-card-value">{int(total_opening):,}
-                <span style="font-size:13px;color:#8b949e;"> cr</span></div>
+            <div class="gh-card-title">Total Opening (Row Sum)</div>
+            <div class="gh-card-value gh-blue">{int(total_opening):,}
+                <span style="font-size:12px;color:#8b949e;"> cr</span></div>
         </div>""", unsafe_allow_html=True)
     with sc2:
         st.markdown(f"""
         <div class="gh-card">
-            <div class="gh-card-title">Total Allocated</div>
-            <div class="gh-card-value">{total_allocated:,}
-                <span style="font-size:13px;color:#8b949e;"> cr</span></div>
+            <div class="gh-card-title">Total Closing (Col Sum)</div>
+            <div class="gh-card-value gh-blue">{total_allocated:,}
+                <span style="font-size:12px;color:#8b949e;"> cr</span></div>
         </div>""", unsafe_allow_html=True)
     with sc3:
         rem_color = "gh-green" if total_remaining == 0 else (
@@ -487,39 +735,46 @@ with tab_entry:
         <div class="gh-card">
             <div class="gh-card-title">Unallocated</div>
             <div class="gh-card-value {rem_color}">{total_remaining:,}
-                <span style="font-size:13px;color:#8b949e;"> cr</span></div>
+                <span style="font-size:12px;color:#8b949e;"> cr</span></div>
+        </div>""", unsafe_allow_html=True)
+    with sc4:
+        balance_icon = "✅" if total_remaining == 0 else "⚠️"
+        balance_color = "gh-green" if total_remaining == 0 else "gh-red"
+        st.markdown(f"""
+        <div class="gh-card">
+            <div class="gh-card-title">Balance Status</div>
+            <div class="gh-card-value {balance_color}" style="font-size:18px;">
+                {balance_icon} {'Balanced' if total_remaining == 0
+                                else 'Unbalanced'}
+            </div>
         </div>""", unsafe_allow_html=True)
 
-    # ── Preview Table ─────────────────────────────────────────────────────
-
-    with st.expander("👁️ Preview Data Table", expanded=False):
-        prev_arr = np.array(st.session_state.prev, dtype=float)
-        df = pd.DataFrame(
-            trans_arr.astype(int),
-            index=[f"{ICONS[i]} {GRADES[i]}" for i in range(N)],
-            columns=GRADES)
-        df.insert(0, "Opening", prev_arr.astype(int))
-        df["Allocated"] = trans_arr.sum(axis=1).astype(int)
-        df["Remaining"] = (prev_arr - trans_arr.sum(axis=1)).astype(int)
-        st.dataframe(df, use_container_width=True)
+    # ── Live Matrix Preview ────────────────────────────────────────────────
+    st.markdown("### 🔢 Live Matrix Preview")
+    st.markdown("""
+    <div style="color:#8b949e;font-size:12px;margin-bottom:8px;
+                font-family:'IBM Plex Mono',monospace;">
+        Row sum = Opening balance &nbsp;|&nbsp;
+        Column sum (↓ last row) = Closing balance
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown(render_matrix_html(trans_arr, prev_arr), unsafe_allow_html=True)
 
     # ── Generate Button ───────────────────────────────────────────────────
-
     st.markdown("")
     bc1, bc2, bc3 = st.columns([1, 2, 1])
     with bc2:
         if not all_valid:
             st.warning("⚠️ Some grades are not fully allocated. "
-                       "You can still generate, but results may be partial.")
-
+                       "You can still generate.")
         if st.button("🚀 Generate Transition Matrix",
-                      use_container_width=True, type="primary"):
+                     use_container_width=True, type="primary"):
             st.session_state.generated = True
-            st.success("✅ Done! Switch to **📊 Heatmap** tab.")
+            st.success("✅ Matrix generated! Switch to **📊 Heatmap** tab.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  TAB 2 — HEATMAP RESULT
+#  TAB 2 — HEATMAP
 # ══════════════════════════════════════════════════════════════════════════════
 
 with tab_heatmap:
@@ -533,7 +788,7 @@ with tab_heatmap:
         k1, k2, k3, k4 = st.columns(4)
         for col, title, val, sub, cls in [
             (k1, "Total Opening",  stats["total_opening"],
-                 "NPR Crore",                      "gh-blue"),
+                 "NPR Crore (row sum)",        "gh-blue"),
             (k2, "Retained",       stats["retained"],
                  f'↔ {stats["retention_pct"]:.1f}%', "gh-blue"),
             (k3, "Upgraded",       stats["upgraded"],
@@ -552,7 +807,29 @@ with tab_heatmap:
 
         st.markdown('<hr class="gh-divider">', unsafe_allow_html=True)
 
-        with st.spinner("🎨 Rendering…"):
+        # Closing totals per grade
+        col_closing = stats["col_closing"]
+        st.markdown("#### Closing Balances by Grade (Column Sums)")
+        cc = st.columns(N)
+        for ci in range(N):
+            with cc[ci]:
+                delta = int(col_closing[ci]) - int(prev_arr[ci])
+                delta_str = f"+{delta:,}" if delta >= 0 else f"{delta:,}"
+                delta_color = "#3fb950" if delta >= 0 else "#f85149"
+                st.markdown(f"""
+                <div class="gh-card">
+                    <div class="gh-card-title">{ICONS[ci]} {GRADES[ci]}</div>
+                    <div class="gh-card-value" style="font-size:18px;">
+                        {int(col_closing[ci]):,}
+                        <span style="font-size:11px;color:#8b949e;"> cr</span>
+                    </div>
+                    <div style="font-size:11px;color:{delta_color};">
+                        {delta_str} vs opening</div>
+                </div>""", unsafe_allow_html=True)
+
+        st.markdown('<hr class="gh-divider">', unsafe_allow_html=True)
+
+        with st.spinner("🎨 Rendering matrix chart…"):
             fig = build_figure(GRADES, trans_arr, prev_arr,
                                st.session_state.period)
 
@@ -563,11 +840,13 @@ with tab_heatmap:
         st.markdown('<hr class="gh-divider">', unsafe_allow_html=True)
         d1, d2, _ = st.columns([1, 1, 2])
         with d1:
-            st.download_button("⬇️ PNG", fig_to_bytes(fig, "png", export_dpi),
+            st.download_button("⬇️ Download PNG",
+                               fig_to_bytes(fig, "png", export_dpi),
                                "nrb_matrix.png", "image/png",
                                use_container_width=True)
         with d2:
-            st.download_button("⬇️ SVG", fig_to_bytes(fig, "svg", export_dpi),
+            st.download_button("⬇️ Download SVG",
+                               fig_to_bytes(fig, "svg", export_dpi),
                                "nrb_matrix.svg", "image/svg+xml",
                                use_container_width=True)
         plt.close(fig)
@@ -583,33 +862,44 @@ with tab_stats:
     else:
         prev_arr  = np.array(st.session_state.prev, dtype=float)
         trans_arr = np.array(st.session_state.matrix, dtype=float)
-        ct = trans_arr.sum(axis=0)
+        col_closing = trans_arr.sum(axis=0)
 
         st.markdown("### Transition Amounts (NPR Crore)")
-        df_a = pd.DataFrame(trans_arr.astype(int),
-                            index=[f"From {g}" for g in GRADES],
-                            columns=[f"To {g}" for g in GRADES])
-        df_a["Total"] = trans_arr.sum(axis=1).astype(int)
-        st.dataframe(df_a, use_container_width=True)
+        st.caption("Row sum = Opening balance | Column sum = Closing balance")
+        df_a = pd.DataFrame(
+            trans_arr.astype(int),
+            index=[f"{ICONS[i]} {GRADES[i]}" for i in range(N)],
+            columns=GRADES)
+        df_a["Row Sum (Opening)"] = trans_arr.sum(axis=1).astype(int)
+        # Append closing row
+        closing_row = list(col_closing.astype(int)) + [int(trans_arr.sum())]
+        df_closing = pd.DataFrame(
+            [closing_row],
+            index=["↓ Col Sum (Closing)"],
+            columns=df_a.columns)
+        df_combined = pd.concat([df_a, df_closing])
+        st.dataframe(df_combined, use_container_width=True)
 
         st.markdown("### Percentage of Opening (%)")
-        pct = [[trans_arr[r, c]/prev_arr[r]*100 if prev_arr[r] > 0 else 0
+        pct = [[trans_arr[r, c] / prev_arr[r] * 100
+                if prev_arr[r] > 0 else 0
                 for c in range(N)] for r in range(N)]
-        df_p = pd.DataFrame(pct,
-                            index=[f"From {g}" for g in GRADES],
-                            columns=[f"To {g}" for g in GRADES]).round(1)
+        df_p = pd.DataFrame(
+            pct,
+            index=[f"{ICONS[i]} {GRADES[i]}" for i in range(N)],
+            columns=GRADES).round(1)
         st.dataframe(df_p.style.background_gradient(
             cmap="RdYlGn_r", axis=None), use_container_width=True)
 
-        st.markdown("### Grade Summary")
+        st.markdown("### Opening vs Closing by Grade")
         summary = pd.DataFrame({
-            "Grade": GRADES,
-            "Opening": prev_arr.astype(int),
-            "Retained": [int(trans_arr[i, i]) for i in range(N)],
-            "Closing": ct.astype(int),
-            "Retention %": [round(trans_arr[i, i]/prev_arr[i]*100, 1)
-                            if prev_arr[i] > 0 else 0 for i in range(N)],
-            "Net Change": (ct - prev_arr).astype(int),
+            "Grade": [f"{ICONS[i]} {GRADES[i]}" for i in range(N)],
+            "Opening (Row Sum)":  prev_arr.astype(int),
+            "Retained":           [int(trans_arr[i, i]) for i in range(N)],
+            "Closing (Col Sum)":  col_closing.astype(int),
+            "Retention %":        [round(trans_arr[i, i] / prev_arr[i] * 100, 1)
+                                   if prev_arr[i] > 0 else 0 for i in range(N)],
+            "Net Change":         (col_closing - prev_arr).astype(int),
         })
         st.dataframe(summary, use_container_width=True)
 
@@ -620,15 +910,19 @@ with tab_stats:
                 up  = sum(trans_arr[i, c] for c in range(i))
                 dn  = sum(trans_arr[i, c] for c in range(i+1, N))
                 inf = sum(trans_arr[r, i] for r in range(N) if r != i)
-                m1, m2, m3, m4 = st.columns(4)
-                with m1: st.metric("Retained", f"{int(ret):,} cr")
-                with m2: st.metric("Upgraded out", f"{int(up):,} cr")
-                with m3: st.metric("Downgraded out", f"{int(dn):,} cr")
-                with m4: st.metric("Inflow", f"{int(inf):,} cr")
+                opening_i  = int(prev_arr[i])
+                closing_i  = int(col_closing[i])
+                m1, m2, m3, m4, m5, m6 = st.columns(6)
+                with m1: st.metric("Opening", f"{opening_i:,} cr")
+                with m2: st.metric("Closing (col sum)", f"{closing_i:,} cr")
+                with m3: st.metric("Retained", f"{int(ret):,} cr")
+                with m4: st.metric("Upgraded out", f"{int(up):,} cr")
+                with m5: st.metric("Downgraded out", f"{int(dn):,} cr")
+                with m6: st.metric("Inflow from others", f"{int(inf):,} cr")
 
         st.markdown('<hr class="gh-divider">', unsafe_allow_html=True)
         csv = io.StringIO()
-        df_a.to_csv(csv)
+        df_combined.to_csv(csv)
         st.download_button("⬇️ Download CSV", csv.getvalue(),
                            "nrb_data.csv", "text/csv",
                            use_container_width=True)
@@ -642,47 +936,57 @@ with tab_about:
     st.markdown("""
     ## ℹ️ About
 
-    ### How Entry Works (Simplified)
+    ### Matrix Logic
 
     ```
-    For EACH grade:
-    ┌─────────────────────────────────────────┐
-    │  1. Enter Opening Balance  (e.g. 430)   │
-    │                                         │
-    │  2. Distribute into closing grades:     │
-    │     ↑ Good ........... 0                │
-    │     ↑ Watchlist ...... 120              │
-    │     ✦ Substandard .... 300  (retained)  │
-    │     ↓ Doubtful ....... 10               │
-    │     ↓ Bad ............ 0                │
-    │                       ───               │
-    │     Allocated:        430  ✅            │
-    │     Remaining:          0               │
-    └─────────────────────────────────────────┘
+    ROWS    = Opening grade   →   Row sum  = Opening balance
+    COLUMNS = Closing grade   →   Col sum  = Closing balance
 
-    Opening  = How much was in this grade
-    Closing  = Sum of all rows flowing INTO this grade
-               (computed automatically!)
+    Example (Substandard row):
+    ┌─────────────────────────────────────────────┐
+    │  Opening: 430 cr                            │
+    │                                             │
+    │  → Good ............  0   (upgrade)         │
+    │  → Watchlist ........ 120  (upgrade)        │
+    │  → Substandard ...... 300  (retained) ✦     │
+    │  → Doubtful .........  10  (downgrade)      │
+    │  → Bad ..............   0                   │
+    │                        ──                   │
+    │  Row sum (Opening): 430 ✅                   │
+    └─────────────────────────────────────────────┘
+
+    Column sum = total flowing INTO that closing grade
+               = Closing balance for that grade
     ```
+
+    ### Key Identities
+
+    | Formula | Meaning |
+    |---------|---------|
+    | `Σ row[i]` | Opening balance of grade i |
+    | `Σ col[j]` | Closing balance of grade j |
+    | `M[i][i]` | Retained in same grade |
+    | `M[i][j], j < i` | Upgraded from i to j |
+    | `M[i][j], j > i` | Downgraded from i to j |
 
     ### Color Legend
 
     | Color | Meaning |
     |-------|---------|
-    | 🔵 Blue | Retained (diagonal) |
-    | 🟢 Green | Upgrade |
-    | 🟡 Amber | Mild downgrade <5% |
-    | 🟠 Coral | Moderate 5–30% |
-    | 🔴 Red | Severe >30% |
-    | ⬜ Gray | No flow |
+    | 🔵 Blue diagonal | Retained |
+    | 🟢 Green | Upgrade (better grade) |
+    | 🟡 Amber | Mild downgrade <5% of opening |
+    | 🟠 Coral | Moderate downgrade 5–30% |
+    | 🔴 Red | Severe downgrade >30% |
+    | ⬜ Gray | No flow (zero) |
 
-    ### NRB Grades
+    ### NRB Grade Definitions
 
-    | Grade | Status |
-    |-------|--------|
-    | Good | Performing |
-    | Watchlist | Special mention |
-    | Substandard | 3–6 months overdue |
-    | Doubtful | Significantly impaired |
-    | Bad | Loss / write-off |
+    | Grade | Status | Typical Overdue |
+    |-------|--------|-----------------|
+    | Good | Performing | Current |
+    | Watchlist | Special mention | 1–3 months |
+    | Substandard | Classified | 3–6 months |
+    | Doubtful | Impaired | 6–12 months |
+    | Bad | Loss / write-off | 12+ months |
     """)
