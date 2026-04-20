@@ -381,7 +381,7 @@ def build_figure(grades, trans, prev, period):
 
     fig.suptitle("Loan Quality Transition Matrix",
                  fontsize=13, fontweight="bold", y=.98, color=TEXT_DARK)
-    plt.tight_layout(rect=(0, .05, 1, .94))
+    plt.tight_layout(rect=(0, .05, 1, .99))
     return fig
 
 
