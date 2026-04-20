@@ -379,12 +379,8 @@ def build_figure(grades, trans, prev, period):
                     columnspacing=1.3, handlelength=1.5, borderpad=.6)
     leg.get_frame().set_facecolor(CANVAS_BG)
 
-    fig.suptitle("NRB Loan Classification — Transition Matrix",
+    fig.suptitle("Loan Quality Transition Matrix",
                  fontsize=13, fontweight="bold", y=.98, color=TEXT_DARK)
-    ax.set_title(
-        "Rows = opening grade (→ row sum = opening) | "
-        "Columns = closing grade (↓ col sum = closing)",
-        fontsize=8.5, color=TEXT_MID, pad=8)
     plt.tight_layout(rect=(0, .05, 1, .94))
     return fig
 
