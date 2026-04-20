@@ -536,7 +536,7 @@ with st.sidebar:
 # ── Page Header ───────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="gh-header">
-    <h1>🏦 NRB Loan Classification — Transition Matrix</h1>
+    <h1>🏦 Loan Quality — Transition Matrix</h1>
     <p>
         Upload your Excel transition matrix template →
         <strong style="color:#1A1A18;">Row sum = Opening</strong> |
