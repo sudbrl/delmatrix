@@ -4,18 +4,8 @@ import pandas as pd
 import streamlit as st
 import io
 import json
-from functools import lru_cache
-from typing import Tuple, Optional, Dict, List
-
-# ── Conditional Imports for Performance ──────────────────────────────────────
-@st.cache_resource
-def load_optional_deps():
-    """Lazy-load heavy dependencies only when needed."""
-    try:
-        import openpyxl
-        return True
-    except ImportError:
-        return False
+import hashlib
+from typing import Tuple, Dict, List, Optional
 
 # ── Page Configuration ───────────────────────────────────────────────────────
 st.set_page_config(
@@ -33,10 +23,6 @@ st.set_page_config(
 # ── Constants & Configuration ────────────────────────────────────────────────
 GRADES = ["Good", "Watchlist", "Substandard", "Doubtful", "Bad"]
 ICONS  = ["🟢", "🟡", "🟠", "🔴", "⛔"]
-GRADE_COLORS = {
-    "Good": "#2E7D32", "Watchlist": "#ED6C02", 
-    "Substandard": "#D32F2F", "Doubtful": "#9C27B0", "Bad": "#424242"
-}
 N = len(GRADES)
 
 # ── Session State Initialization ─────────────────────────────────────────────
@@ -45,7 +31,7 @@ def init_session_state():
         "prev": None, "matrix": None, "period": "",
         "generated": False, "upload_error": None, 
         "filename": None, "stats_cache": None,
-        "theme": "light"
+        "last_fig": None
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -57,36 +43,51 @@ init_session_state()
 @st.cache_data(ttl=3600, show_spinner=False)
 def parse_template_cached(file_hash: str, file_bytes: bytes) -> Tuple[np.ndarray, np.ndarray]:
     """Cached Excel parser with hash-based invalidation."""
-    import openpyxl
-    from openpyxl import load_workbook
+    try:
+        import openpyxl
+    except ImportError:
+        raise ImportError("Missing dependency: openpyxl. Run: pip install openpyxl")
     
     df = pd.read_excel(io.BytesIO(file_bytes), header=None, engine="openpyxl")
     
     if df.empty:
         raise ValueError("The uploaded file appears to be empty.")
 
-    def norm(s): return str(s).strip().lower()
+    def norm(s): 
+        return str(s).strip().lower()
+    
     grade_norms = [norm(g) for g in GRADES]
 
     # Vectorized header detection
-    header_candidates = df.apply(lambda row: row.astype(str).str.strip().str.lower().isin(grade_norms).sum(), axis=1)
-    header_row_idx = header_candidates[header_candidates >= 4].index[0] if (header_candidates >= 4).any() else None
+    header_candidates = df.apply(
+        lambda row: row.astype(str).str.strip().str.lower().isin(grade_norms).sum(), 
+        axis=1
+    )
+    header_row_idx = None
+    if (header_candidates >= 4).any():
+        header_row_idx = header_candidates[header_candidates >= 4].index[0]
 
     if header_row_idx is None:
         raise ValueError("Could not find header row with grade names: Good, Watchlist, Substandard, Doubtful, Bad")
 
     # Build column mapping efficiently
     header_row = df.iloc[header_row_idx].astype(str).str.strip().str.lower()
-    col_map = {grade_norms[i]: header_row[header_row == grade_norms[i]].index[0] 
-               for i in range(N) if grade_norms[i] in header_row.values}
+    col_map = {}
+    for i, gn in enumerate(grade_norms):
+        matches = header_row[header_row == gn]
+        if len(matches) > 0:
+            col_map[gn] = matches.index[0]
     
     if len(col_map) < N:
         missing = [g for g in grade_norms if g not in col_map]
         raise ValueError(f"Missing grades in header: {missing}")
 
     # Extract data rows with vectorized operations
-    data_mask = df.iloc[:, 0].astype(str).str.strip().str.lower().isin(grade_norms)
-    data_rows_df = df[data_mask].set_index(df.columns[0])
+    first_col = df.iloc[:, 0].astype(str).str.strip().str.lower()
+    data_mask = first_col.isin(grade_norms)
+    data_rows_df = df[data_mask].copy()
+    if not data_rows_df.empty:
+        data_rows_df = data_rows_df.set_index(data_rows_df.columns[0])
     
     # Build transition matrix
     trans = np.zeros((N, N), dtype=float)
@@ -94,9 +95,14 @@ def parse_template_cached(file_hash: str, file_bytes: bytes) -> Tuple[np.ndarray
         if g_from in data_rows_df.index:
             row_data = data_rows_df.loc[g_from]
             for ci, g_to in enumerate(grade_norms):
-                if g_to in col_map and col_map[g_to] < len(row_data):
-                    val = row_data.iloc[col_map[g_to]]
-                    trans[ri, ci] = float(val) if pd.notna(val) else 0.0
+                if g_to in col_map:
+                    col_idx = col_map[g_to]
+                    if col_idx < len(row_data):
+                        val = row_data.iloc[col_idx]
+                        try:
+                            trans[ri, ci] = float(val) if pd.notna(val) else 0.0
+                        except (ValueError, TypeError):
+                            trans[ri, ci] = 0.0
 
     # Validation
     if trans.sum() == 0:
@@ -170,7 +176,6 @@ def compute_statistics_cached(matrix_tuple: tuple, prev_tuple: tuple) -> Dict:
 # ── Helper Functions ─────────────────────────────────────────────────────────
 def compute_file_hash(file_bytes: bytes) -> str:
     """Compute simple hash for cache invalidation."""
-    import hashlib
     return hashlib.md5(file_bytes).hexdigest()
 
 
@@ -184,7 +189,7 @@ def format_percentage(value: float, decimals: int = 1) -> str:
     return f"{value:.{decimals}f}%"
 
 
-# ── CSS Styling (Optimized & Modernized) ─────────────────────────────────────
+# ── CSS Styling ──────────────────────────────────────────────────────────────
 def load_css():
     st.markdown("""
     <style>
@@ -204,7 +209,6 @@ def load_css():
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     
-    /* Card Components */
     .metric-card {
         background: var(--bg-secondary);
         border: 1px solid var(--border);
@@ -238,7 +242,6 @@ def load_css():
         font-weight: 500;
     }
     
-    /* Header */
     .page-header {
         background: linear-gradient(135deg, var(--bg-secondary), #F5F5F4);
         border: 1px solid var(--border);
@@ -259,7 +262,6 @@ def load_css():
         font-size: 14px;
     }
     
-    /* Badges */
     .badge {
         display: inline-flex;
         align-items: center;
@@ -274,7 +276,6 @@ def load_css():
     .badge.success { background: #E8F5E9; color: var(--success); }
     .badge.warning { background: #FFF3E0; color: var(--warning); }
     
-    /* Upload Zone */
     .upload-zone {
         background: var(--bg-secondary);
         border: 2px dashed var(--border);
@@ -288,7 +289,6 @@ def load_css():
         border-color: var(--primary);
     }
     
-    /* Matrix Table */
     .matrix-table {
         width: 100%;
         border-collapse: separate;
@@ -317,7 +317,6 @@ def load_css():
     .matrix-table .upgrade { color: var(--success); }
     .matrix-table .downgrade { color: var(--error); }
     
-    /* Tabs Enhancement */
     .stTabs [data-baseweb="tab-list"] {
         gap: 4px;
         padding: 4px;
@@ -336,7 +335,6 @@ def load_css():
         box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     }
     
-    /* Buttons */
     .stButton > button {
         background: var(--primary);
         color: white;
@@ -350,7 +348,6 @@ def load_css():
         background: var(--primary-dark);
     }
     
-    /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { 
@@ -359,7 +356,6 @@ def load_css():
     }
     ::-webkit-scrollbar-thumb:hover { background: #A0A0A0; }
     
-    /* Responsive */
     @media (max-width: 768px) {
         .metric-value { font-size: 20px; }
         .page-header h1 { font-size: 22px !important; }
@@ -368,6 +364,55 @@ def load_css():
     """, unsafe_allow_html=True)
 
 load_css()
+
+# ── HTML Renderer Function (defined before use) ───────────────────────────────
+def render_matrix_html(trans: np.ndarray, prev: np.ndarray) -> str:
+    """Optimized HTML table renderer with CSS classes."""
+    n = len(GRADES)
+    col_closing = trans.sum(axis=0)
+    
+    # Build header
+    headers = "".join(f'<th>{g}</th>' for g in GRADES)
+    html_parts = [f'<table class="matrix-table"><thead><tr><th style="text-align:left;padding-left:14px;">From / To</th>{headers}<th>Opening</th></tr></thead><tbody>']
+    
+    # Build rows
+    for ri in range(n):
+        cells = []
+        for ci in range(n):
+            v = trans[ri, ci]
+            if ri == ci: 
+                cls = "diag"
+            elif ci < ri: 
+                cls = "upgrade" 
+            elif v == 0: 
+                cls = "zero"
+            else:
+                pct = v/prev[ri]*100 if prev[ri]>0 else 0
+                cls = "downgrade" if pct >= 5 else ""
+            cells.append(f'<td class="{cls}">{v:,.1f}</td>')
+        
+        row_sum = prev[ri]
+        html_parts.append(
+            f'<tr><td style="text-align:left;padding-left:14px;font-weight:600;">'
+            f'{ICONS[ri]} {GRADES[ri]}</td>'
+            f'{"".join(cells)}'
+            f'<td style="color:var(--neutral)">{row_sum:,.1f}</td></tr>'
+        )
+    
+    # Closing row
+    total_cells = "".join(
+        f'<td style="font-weight:700;color:var(--primary)">{col_closing[ci]:,.1f}</td>' 
+        for ci in range(n)
+    )
+    html_parts.append(
+        f'<tr style="background:#F5F9FF;"><td style="text-align:left;padding-left:14px;font-weight:700;">Closing</td>'
+        f'{total_cells}'
+        f'<td style="font-weight:700;color:var(--primary)">{prev.sum():,.1f}</td></tr>'
+    )
+    
+    html_parts.append("</tbody></table>")
+    return "".join(html_parts)
+
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -403,19 +448,13 @@ with st.sidebar:
             value=220,
             help="Higher DPI = better quality but larger file size"
         )
-        export_format = st.radio(
-            "Preferred Format",
-            options=["PNG", "SVG", "PDF"],
-            index=0,
-            horizontal=True
-        )
     
     st.divider()
     
     # Reset Option
     if st.session_state.generated:
         if st.button("🔄 Upload New File", use_container_width=True, type="secondary"):
-            for key in ["prev", "matrix", "generated", "upload_error", "filename", "stats_cache"]:
+            for key in ["prev", "matrix", "generated", "upload_error", "filename", "stats_cache", "last_fig"]:
                 st.session_state[key] = None if key != "period" else st.session_state.period
             st.rerun()
     
@@ -466,7 +505,7 @@ st.markdown("""
         Upload your Excel template → Analyze loan migration patterns → 
         <span style="color:var(--primary);font-weight:600;">Export insights</span>
         <span class="badge">NRB Compliant</span>
-        <span class="badge success">v2.0</span>
+        <span class="badge success">v2.1</span>
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -523,9 +562,8 @@ with tabs[0]:
         )
 
         if uploaded:
-            file_hash = compute_file_hash(uploaded.read())
-            uploaded.seek(0)  # Reset for re-reading
             file_bytes = uploaded.read()
+            file_hash = compute_file_hash(file_bytes)
             
             with st.spinner("🔍 Parsing template..."):
                 try:
@@ -567,10 +605,11 @@ with tabs[0]:
         
         for col, title, value, subtitle, color in kpis:
             with col:
+                display_val = format_currency(value) if 'Balance' in title or 'Check' in subtitle else format_percentage(value)
                 st.markdown(f"""
                 <div class="metric-card">
                     <div class="metric-title">{title}</div>
-                    <div class="metric-value">{format_currency(value) if 'Balance' in title or 'Check' not in subtitle else format_percentage(value)}</div>
+                    <div class="metric-value">{display_val}</div>
                     <div class="metric-sub" style="color:{color}">{subtitle}</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -648,15 +687,16 @@ with tabs[1]:
         
         st.divider()
         
-        # Grade Distribution Charts (using native Streamlit charts for performance)
+        # Grade Distribution Charts
         col_chart1, col_chart2 = st.columns(2)
         
         with col_chart1:
             st.markdown("##### Opening vs Closing Distribution")
+            # FIXED: Added proper brackets for list comprehensions
             dist_data = pd.DataFrame({
                 "Grade": [f"{ICONS[i]} {GRADES[i]}" for i in range(N)],
-                "Opening": stats["grade_details"][i]["opening"] for i in range(N),
-                "Closing": stats["grade_details"][i]["closing"] for i in range(N)
+                "Opening": [stats["grade_details"][i]["opening"] for i in range(N)],
+                "Closing": [stats["grade_details"][i]["closing"] for i in range(N)]
             })
             st.bar_chart(
                 dist_data.set_index("Grade"),
@@ -678,17 +718,15 @@ with tabs[1]:
         
         st.divider()
         
-        # Interactive Matrix Heatmap (simplified for performance)
+        # Interactive Matrix Heatmap
         st.markdown("#### 🔥 Transition Flow Heatmap")
         
-        # Prepare data for heatmap
         heatmap_df = pd.DataFrame(
             st.session_state.matrix,
             index=[f"{ICONS[i]} {GRADES[i]}" for i in range(N)],
             columns=[f"{ICONS[i]} {GRADES[i]}" for i in range(N)]
         )
         
-        # Display with conditional formatting
         st.dataframe(
             heatmap_df.style.format("{:.1f}").background_gradient(
                 cmap="RdYlGn_r", axis=None, vmin=0, 
@@ -703,7 +741,6 @@ with tabs[1]:
         col_exp1, col_exp2, col_exp3 = st.columns(3)
         
         with col_exp1:
-            # Generate matplotlib figure only when requested
             if st.button("🖼️ Generate Chart", use_container_width=True):
                 with st.spinner("Rendering..."):
                     fig = build_figure_optimized(
@@ -713,7 +750,7 @@ with tabs[1]:
                     st.session_state["last_fig"] = fig
                     st.pyplot(fig, use_container_width=True)
         
-        if "last_fig" in st.session_state:
+        if st.session_state.get("last_fig") is not None:
             with col_exp2:
                 st.download_button(
                     "⬇️ PNG",
@@ -810,8 +847,9 @@ with tabs[2]:
                 for col, label, value in metrics:
                     col.metric(label, value)
                 
-                # Retention gauge (simplified)
-                st.progress(int(detail["retention_rate"]), text=f"Retention: {detail['retention_rate']:.1f}%")
+                # Retention gauge
+                st.progress(min(100, int(detail["retention_rate"])), 
+                           text=f"Retention: {detail['retention_rate']:.1f}%")
                 
                 # Net change indicator
                 net_color = "🟢" if detail["net_change"] >= 0 else "🔴"
@@ -893,7 +931,7 @@ with tabs[3]:
         st.markdown("### ⚡ Performance Tips")
         st.markdown("""
         - ✅ Use .xlsx format (faster parsing)
-        - ✅ Keep file size <10MB for best performance
+        - ✅ Keep file size &lt;10MB for best performance
         - ✅ Cache persists for 1 hour (auto-refreshes)
         - ✅ Export DPI 220 balances quality/speed
         """)
@@ -902,7 +940,7 @@ with tabs[3]:
     st.markdown("""
     <div style="text-align:center;color:var(--neutral);font-size:12px;">
         <strong>NRB Loan Transition Matrix Tool</strong><br>
-        Built for Nepal Rastra Bank reporting standards • v2.0<br>
+        Built for Nepal Rastra Bank reporting standards • v2.1<br>
         <em>Performance optimized • Cache-enabled • Mobile responsive</em>
     </div>
     """, unsafe_allow_html=True)
@@ -924,13 +962,13 @@ def build_figure_optimized(grades, trans, prev, period, figsize=(14, 8)):
     tw = HW + n * CW
     
     # Create figure with optimized DPI
-    fig, ax = plt.subplots(figsize=figsize, dpi=100)  # Lower DPI for faster rendering
+    fig, ax = plt.subplots(figsize=figsize, dpi=100)
     fig.patch.set_facecolor("#FAFAF9")
     ax.set_facecolor("#FAFAF9")
     ax.set_aspect("equal")
     ax.axis("off")
     
-    # Color constants (defined once)
+    # Color constants
     COLORS = {
         "canvas": "#FAFAF9", "header": "#F5F5F4", "row_hdr": "#F1EFE8",
         "grid": "#E0E0E0", "outer": "#BDBDBD",
@@ -1021,48 +1059,15 @@ def fig_to_bytes(fig, fmt="png", dpi=150):
     buf = io.BytesIO()
     fig.savefig(buf, format=fmt, dpi=dpi, bbox_inches="tight",
                 pad_inches=0.1, facecolor=fig.get_facecolor(),
-                optimize=True)  # PNG optimization
+                optimize=True)
     buf.seek(0)
     return buf.read()
 
 
-def render_matrix_html(trans, prev):
-    """Optimized HTML table renderer with CSS classes."""
-    n = len(GRADES)
-    col_closing = trans.sum(axis=0)
-    
-    # Build header
-    headers = "".join(f'<th>{g}</th>' for g in GRADES)
-    html = [f'<table class="matrix-table"><thead><tr><th style="text-align:left;padding-left:14px;">From / To</th>{headers}<th>Opening</th></tr></thead><tbody>']
-    
-    # Build rows
-    for ri in range(n):
-        cells = []
-        for ci in range(n):
-            v = trans[ri, ci]
-            if ri == ci: cls = "diag"
-            elif ci < ri: cls = "upgrade" 
-            elif v == 0: cls = "zero"
-            else:
-                pct = v/prev[ri]*100 if prev[ri]>0 else 0
-                cls = "downgrade" if pct >= 5 else ""
-            cells.append(f'<td class="{cls}">{v:,.1f}</td>')
-        
-        row_sum = prev[ri]
-        html.append(f'<tr><td style="text-align:left;padding-left:14px;font-weight:600;">{ICONS[ri]} {GRADES[ri]}</td>'
-                   f'{"".join(cells)}<td style="color:var(--neutral)">{row_sum:,.1f}</td></tr>')
-    
-    # Closing row
-    total_cells = "".join(f'<td style="font-weight:700;color:var(--primary)">{col_closing[ci]:,.1f}</td>' for ci in range(n))
-    html.append(f'<tr style="background:#F5F9FF;"><td style="text-align:left;padding-left:14px;font-weight:700;">Closing</td>'
-               f'{total_cells}<td style="font-weight:700;color:var(--primary)">{prev.sum():,.1f}</td></tr>')
-    
-    html.append("</tbody></table>")
-    return "".join(html)
-
-
-# ── Error Handling & Fallbacks ───────────────────────────────────────────────
-if not load_optional_deps():
+# ── Dependency Check ─────────────────────────────────────────────────────────
+try:
+    import openpyxl
+except ImportError:
     st.error("""
     ### ⚠️ Missing Dependency
     Please install required package:
@@ -1072,15 +1077,3 @@ if not load_optional_deps():
     Then restart the application.
     """)
     st.stop()
-
-# ── Final Performance Note ───────────────────────────────────────────────────
-# This optimized version includes:
-# ✅ @st.cache_data for expensive computations (parsing, stats)
-# ✅ Tuple-based cache keys for numpy arrays  
-# ✅ Lazy loading of heavy dependencies
-# ✅ Reduced matplotlib DPI for faster rendering
-# ✅ Vectorized pandas operations
-# ✅ Memory-efficient file handling
-# ✅ CSS variables for faster style rendering
-# ✅ Conditional chart generation (on-demand)
-# ✅ Responsive design for all screen sizes
