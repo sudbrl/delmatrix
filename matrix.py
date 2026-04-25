@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# NRB Loan Transition Matrix Dashboard
+# Loan Transition Matrix Dashboard
 # Original Heatmap Restored + Robust Excel Parser
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -15,7 +15,7 @@ from typing import Tuple, Dict
 
 # ── 1. PAGE CONFIGURATION ────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="NRB Loan Transition Matrix",
+    page_title="Loan Transition Matrix",
     page_icon="🏦",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -277,7 +277,7 @@ def render_matrix_html(trans: np.ndarray, prev: np.ndarray) -> str:
 
 # ── 7. SIDEBAR & HEADER ─────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown('<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;"><span style="font-size:32px;">🏦</span><div><div style="font-weight:700;font-size:18px;">NRB Matrix Tool</div><div style="font-size:12px;color:var(--neutral);">v2.2 | Original Heatmap</div></div></div>', unsafe_allow_html=True)
+    st.markdown('<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;"><span style="font-size:32px;">🏦</span><div><div style="font-weight:700;font-size:18px;">Loan Matrix Tool</div><div style="font-size:12px;color:var(--neutral);">v2.2 | Original Heatmap</div></div></div>', unsafe_allow_html=True)
     st.divider()
     st.session_state.period = st.text_input("📅 Reporting Period", value=st.session_state.period, placeholder="e.g., Poush 2081")
     with st.expander("🖼️ Export Settings", expanded=False):
