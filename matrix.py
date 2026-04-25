@@ -7,7 +7,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import io
-import json
 import hashlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -287,10 +286,7 @@ with st.sidebar:
         if st.button("🔄 Upload New File", type="secondary", use_container_width=True):
             st.session_state.update({"prev": None, "matrix": None, "generated": False, "stats_cache": None, "last_fig": None})
             st.rerun()
-        st.download_button("⬇️ Export JSON", json.dumps({"matrix": st.session_state.matrix.tolist(), "opening": st.session_state.prev.tolist()}, indent=2), "nrb_export.json", "application/json", use_container_width=True)
-    st.divider()
-    st.markdown('<div style="font-size:12px;color:var(--neutral);line-height:1.6;"><strong>Row Sum</strong> = Opening Balance<br><strong>Col Sum</strong> = Closing Balance<br><strong>Diagonal</strong> = Retained Loans</div>', unsafe_allow_html=True)
-
+        
 st.markdown('<div class="page-header"><h1>🏦 Loan Quality Transition Matrix</h1><p>Upload Excel template → Analyze loan migration → <span style="color:var(--primary);font-weight:600;">Export Insights</span><span class="badge">NRB Compliant</span></p></div>', unsafe_allow_html=True)
 
 tab_upload, tab_dash, tab_analytics, tab_guide = st.tabs(["📂 Upload", "📊 Dashboard", "📈 Analytics", "ℹ️ Guide"])
