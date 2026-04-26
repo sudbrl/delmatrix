@@ -249,8 +249,8 @@ def build_figure(grades, trans, prev, period):
     patches = [mpatches.Patch(facecolor=c, edgecolor=GRID_EDGE, lw=.7, label=l) for c, l in legend_items]
     leg = ax.legend(handles=patches, loc="upper center", bbox_to_anchor=(.5, -.07), ncol=3, fontsize=8.3, frameon=True, fancybox=False, edgecolor=GRID_EDGE, columnspacing=1.3, handlelength=1.5, borderpad=.6)
     leg.get_frame().set_facecolor(CANVAS_BG)
-    fig.suptitle("Loan Quality Transition Matrix", fontsize=13, fontweight="bold", y=.98, color=TEXT_DARK)
-    plt.tight_layout(rect=(0, .05, 1, .97))
+    fig.suptitle("Loan Quality Transition Matrix", fontsize=13, fontweight="bold", y=0.995, color=TEXT_DARK)
+    plt.tight_layout(rect=(0, .05, 1, .995))
     return fig
 
 def fig_to_bytes(fig, fmt="png", dpi=150):
