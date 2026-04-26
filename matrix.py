@@ -245,6 +245,7 @@ def build_figure(grades, trans, prev, period):
     ax.add_patch(mpatches.Rectangle((0, 0), tw, th, fill=False, lw=1.15, edgecolor=OUTER_EDGE, zorder=4))
     ax.set_xlim(-.08, tw + .08); ax.set_ylim(-.08, th + .1)
 
+    legend_items = [(DIAG_BG, "Retained (diagonal)"), (UPG_BG, "Upgrade"), (MILD_BG, "Mild downgrade <5%"), (MOD_BG, "Moderate 5-30%"), (SEV_BG, "Severe >30%"), (ZERO_BG, "No flow")]
     patches = [mpatches.Patch(facecolor=c, edgecolor=GRID_EDGE, lw=.7, label=l) for c, l in legend_items]
     leg = ax.legend(handles=patches, loc="upper center", bbox_to_anchor=(.5, -.07), ncol=3, fontsize=8.3, frameon=True, fancybox=False, edgecolor=GRID_EDGE, columnspacing=1.3, handlelength=1.5, borderpad=.6)
     leg.get_frame().set_facecolor(CANVAS_BG)
