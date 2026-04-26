@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# Loan Transition Matrix Dashboard  —  v5.1 (Final Clean Version)
+# Loan Transition Matrix Dashboard — v6.0 (Gemini Explanation Focus)
 # ══════════════════════════════════════════════════════════════════════════════
 
 import streamlit as st
@@ -9,8 +9,6 @@ import io
 import hashlib
 import json
 import urllib.request
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 
 # ── CONFIG ───────────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Loan Transition Matrix", page_icon="🏦", layout="wide")
@@ -20,109 +18,123 @@ ICONS  = ["🟢", "🟡", "🟠", "🔴", "⛔"]
 N = len(GRADES)
 
 # ── SESSION STATE ────────────────────────────────────────────────────────────
-def init_session_state():
+def init_state():
     defaults = {
         "prev": None,
         "matrix": None,
         "generated": False,
-        "stats_cache": None,
         "period": "",
-        "ai_summary": None,
+        "ai_explanation": None
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
-init_session_state()
+init_state()
 
 # ── UTILITIES ────────────────────────────────────────────────────────────────
-def compute_file_hash(b): return hashlib.md5(b).hexdigest()
-def format_currency(v): return f"{v:,.1f} cr"
-def format_pct(v): return f"{v:.1f}%"
+def hash_file(b): return hashlib.md5(b).hexdigest()
 
-# ── PARSER ───────────────────────────────────────────────────────────────────
 def clean_numeric(val):
     try:
         return float(str(val).replace(",", "").strip())
     except:
         return 0.0
 
+# ── PARSER ───────────────────────────────────────────────────────────────────
 @st.cache_data
-def parse_template_cached(_, file_bytes):
+def parse_excel(_, file_bytes):
     df = pd.read_excel(io.BytesIO(file_bytes), header=None)
-    grades_lower = [g.lower() for g in GRADES]
+    g = [x.lower() for x in GRADES]
 
     header_idx = None
     for i in range(10):
         row = [str(x).lower() for x in df.iloc[i]]
-        if sum(g in row for g in grades_lower) >= 4:
+        if sum(x in row for x in g) >= 4:
             header_idx = i
             break
 
     if header_idx is None:
-        raise ValueError("Header not found")
+        raise ValueError("Header row not found")
 
     col_map = {}
     for i, val in enumerate(df.iloc[header_idx]):
-        if str(val).lower() in grades_lower:
-            col_map[str(val).lower()] = i
+        v = str(val).lower()
+        if v in g:
+            col_map[v] = i
 
-    data = {}
+    rows = {}
     for i in range(header_idx + 1, len(df)):
         key = str(df.iloc[i, 0]).lower()
-        if key in grades_lower:
-            data[key] = df.iloc[i]
+        if key in g:
+            rows[key] = df.iloc[i]
 
     trans = np.zeros((N, N))
-    for i, g1 in enumerate(grades_lower):
-        for j, g2 in enumerate(grades_lower):
-            trans[i, j] = clean_numeric(data[g1][col_map[g2]])
+    for i, r in enumerate(g):
+        for j, c in enumerate(g):
+            trans[i, j] = clean_numeric(rows[r][col_map[c]])
 
     return trans.sum(axis=1), trans
 
-# ── STATS ────────────────────────────────────────────────────────────────────
-def compute_stats(trans, prev):
-    total = trans.sum()
-    retained = np.trace(trans)
-    upgraded = sum(trans[r,c] for r in range(N) for c in range(r))
-    downgraded = sum(trans[r,c] for r in range(N) for c in range(r+1, N))
+# ── GEMINI PROMPT (FOCUSED ON AMOUNT + %) ─────────────────────────────────────
+def build_prompt(trans, prev, period):
+    pct = np.zeros_like(trans)
 
-    return {
-        "total_opening": prev.sum(),
-        "total_closing": total,
-        "retention_pct": retained / total * 100 if total else 0,
-        "upgrade_pct": upgraded / total * 100 if total else 0,
-        "downgrade_pct": downgraded / total * 100 if total else 0,
-        "migration_rate": (upgraded+downgraded)/total*100 if total else 0,
-    }
+    for r in range(N):
+        if prev[r] > 0:
+            pct[r] = (trans[r] / prev[r]) * 100
 
-# ── GEMINI PROMPT ────────────────────────────────────────────────────────────
-def build_prompt(trans, prev, stats, period):
-    return f"""
-Loan Portfolio Analysis for {period}
+    lines = []
+    lines.append(f"Loan transition matrix explanation for period: {period}")
+    lines.append("")
+    lines.append("Rows = FROM grade, Columns = TO grade")
+    lines.append("")
 
-Opening: {stats['total_opening']}
-Closing: {stats['total_closing']}
-Retention: {stats['retention_pct']:.1f}%
-Upgrade: {stats['upgrade_pct']:.1f}%
-Downgrade: {stats['downgrade_pct']:.1f}%
+    lines.append("AMOUNTS (NPR Crore):")
+    for i in range(N):
+        row = ", ".join(f"{trans[i,j]:.1f}" for j in range(N))
+        lines.append(f"{GRADES[i]} -> [{row}] (Opening {prev[i]:.1f})")
 
-Provide:
-1. Executive summary
-2. Migration insights
-3. Risk analysis
-4. Recommendations
-"""
+    lines.append("")
+    lines.append("PERCENTAGES (% of row):")
+    for i in range(N):
+        row = ", ".join(f"{pct[i,j]:.1f}%" for j in range(N))
+        lines.append(f"{GRADES[i]} -> [{row}]")
 
+    lines.append("")
+    lines.append("TASK:")
+    lines.append(
+        "Explain clearly:\n"
+        "- What the amounts mean\n"
+        "- What the percentages indicate\n"
+        "- Where upgrades are happening\n"
+        "- Where downgrades are concentrated\n"
+        "- Which movements are significant\n\n"
+        "Keep it concise, structured, and analytical (not long report)."
+    )
+
+    return "\n".join(lines)
+
+# ── GEMINI CALL ──────────────────────────────────────────────────────────────
 def call_gemini(prompt, api_key):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+
     payload = json.dumps({
-        "contents": [{"parts": [{"text": prompt}]}]
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.2,
+            "maxOutputTokens": 2048
+        }
     }).encode()
 
-    req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
-    res = urllib.request.urlopen(req)
-    data = json.loads(res.read())
+    req = urllib.request.Request(
+        url,
+        data=payload,
+        headers={"Content-Type": "application/json"}
+    )
+
+    with urllib.request.urlopen(req, timeout=60) as res:
+        data = json.loads(res.read().decode())
 
     try:
         return data["candidates"][0]["content"]["parts"][0]["text"]
@@ -132,66 +144,76 @@ def call_gemini(prompt, api_key):
 # ── UI ───────────────────────────────────────────────────────────────────────
 st.title("🏦 Loan Transition Matrix")
 
-tab1, tab2, tab3 = st.tabs(["Upload", "Dashboard", "AI Summary"])
+tab1, tab2, tab3 = st.tabs(["Upload", "Matrix", "AI Explanation"])
 
 # ── UPLOAD ───────────────────────────────────────────────────────────────────
 with tab1:
-    file = st.file_uploader("Upload Excel", type=["xlsx"])
+    file = st.file_uploader("Upload Excel (.xlsx)", type=["xlsx"])
 
     if file:
-        prev, trans = parse_template_cached(compute_file_hash(file.read()), file.getvalue())
+        bytes_data = file.read()
+        prev, trans = parse_excel(hash_file(bytes_data), bytes_data)
+
         st.session_state.prev = prev
         st.session_state.matrix = trans
-        st.success("File loaded")
+        st.session_state.generated = True
 
-        if st.button("Generate Dashboard"):
-            st.session_state.generated = True
-            st.session_state.stats_cache = compute_stats(trans, prev)
-            st.rerun()
+        st.success("File loaded successfully")
 
-# ── DASHBOARD ────────────────────────────────────────────────────────────────
+# ── MATRIX ───────────────────────────────────────────────────────────────────
 with tab2:
     if not st.session_state.generated:
         st.info("Upload data first")
     else:
-        stats = st.session_state.stats_cache
-        st.metric("Portfolio", format_currency(stats["total_closing"]))
-        st.metric("Retention", format_pct(stats["retention_pct"]))
-        st.metric("Migration", format_pct(stats["migration_rate"]))
+        trans = st.session_state.matrix
+        prev = st.session_state.prev
 
-        st.dataframe(pd.DataFrame(st.session_state.matrix, columns=GRADES))
+        df = pd.DataFrame(
+            np.round(trans, 2),
+            index=[f"{ICONS[i]} {GRADES[i]}" for i in range(N)],
+            columns=GRADES
+        )
+        df["Opening"] = np.round(prev, 2)
 
-# ── AI SUMMARY ───────────────────────────────────────────────────────────────
+        st.markdown("### Transition Amounts (NPR Crore)")
+        st.dataframe(df, use_container_width=True)
+
+        pct_df = pd.DataFrame(
+            [
+                [(trans[r,c]/prev[r]*100) if prev[r] > 0 else 0 for c in range(N)]
+                for r in range(N)
+            ],
+            index=[f"{ICONS[i]} {GRADES[i]}" for i in range(N)],
+            columns=GRADES
+        )
+
+        st.markdown("### Transition Percentages (%)")
+        st.dataframe(pct_df.round(1), use_container_width=True)
+
+# ── AI EXPLANATION ───────────────────────────────────────────────────────────
 with tab3:
     if not st.session_state.generated:
-        st.info("Generate dashboard first")
+        st.info("Upload data first")
     else:
         api_key = st.secrets.get("GEMINI_API_KEY", None)
 
         if not api_key:
-            st.warning("Add GEMINI_API_KEY in secrets")
+            st.warning("Add GEMINI_API_KEY in Streamlit secrets")
         else:
-            if st.button("Generate AI Summary") or st.session_state.ai_summary:
-                if not st.session_state.ai_summary:
+            if st.button("Generate Explanation") or st.session_state.ai_explanation:
+                if not st.session_state.ai_explanation:
                     prompt = build_prompt(
                         st.session_state.matrix,
                         st.session_state.prev,
-                        st.session_state.stats_cache,
                         st.session_state.period or "N/A"
                     )
-                    with st.spinner("Generating..."):
-                        st.session_state.ai_summary = call_gemini(prompt, api_key)
+                    with st.spinner("Analyzing transitions..."):
+                        st.session_state.ai_explanation = call_gemini(prompt, api_key)
 
-                st.markdown(st.session_state.ai_summary)
-
-# ── GUIDE ────────────────────────────────────────────────────────────────────
-st.sidebar.markdown("## Guide")
-st.sidebar.markdown(
-    """
-1. Upload Excel file  
-2. Generate dashboard  
-3. Review KPIs  
-4. Generate AI summary  
-5. Download insights  
-"""
-)
+                st.markdown("### Gemini Explanation")
+                st.markdown(
+                    f'<div style="background:#F5F9FF;padding:20px;border-radius:10px;">'
+                    f'{st.session_state.ai_explanation.replace(chr(10), "<br>")}'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
