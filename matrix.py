@@ -1,3 +1,7 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Loan Transition Matrix Dashboard  —  v4.0  (PDF Redesign)
+# ══════════════════════════════════════════════════════════════════════════════
+
 import streamlit as st
 import pandas as pd
 import numpy as np
